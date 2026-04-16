@@ -6,9 +6,11 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/ProtectedRoute';
 import DelegationPage from './DelegationPage';
+import EmployeesPage from './EmployeesPage';
 import LoginPage from './LoginPage';
 import ProfilePage from './ProfilePage';
 import RolesPage from './RolesPage';
+import UsersPage from './UsersPage';
 
 let authState = {
   loading: false,
@@ -17,12 +19,13 @@ let authState = {
     id: 1,
     full_name: 'Admin User',
     role: 'admin',
-    permissions: ['dashboard.view', 'roles.view', 'delegations.manage'],
+    permissions: ['dashboard.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'],
     delegated_permission_sources: [],
   },
   login: vi.fn(),
   logout: vi.fn(),
-  hasPermission: (permission) => ['dashboard.view', 'roles.view', 'delegations.manage'].includes(permission),
+  updateProfile: vi.fn(),
+  hasPermission: (permission) => ['dashboard.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'].includes(permission),
 };
 
 vi.mock('../api/client', () => ({
@@ -37,14 +40,52 @@ vi.mock('../api/client', () => ({
                 role_name: 'admin',
                 description: 'Admin role',
                 user_count: 1,
-                base_permissions: ['dashboard.view', 'roles.view', 'delegations.manage'],
+                base_permissions: ['dashboard.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'],
                 delegated_permissions: [],
-                effective_permissions: ['dashboard.view', 'roles.view', 'delegations.manage'],
+                effective_permissions: ['dashboard.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'],
               },
             ],
           },
         });
       }
+
+      if (url === '/users') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                username: 'admin',
+                full_name: 'Admin User',
+                email: 'admin@example.com',
+                role: 'admin',
+                employee_code: 'EMP001',
+                status: 'active',
+              },
+            ],
+          },
+        });
+      }
+
+      if (url === '/employees') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                employee_code: 'EMP001',
+                username: 'admin',
+                full_name: 'Admin User',
+                department: 'Quản trị',
+                position: 'Admin',
+                role: 'admin',
+                status: 'active',
+              },
+            ],
+          },
+        });
+      }
+
       if (url === '/delegations/meta') {
         return Promise.resolve({
           data: {
@@ -52,7 +93,7 @@ vi.mock('../api/client', () => ({
               user_id: 1,
               full_name: 'Admin User',
               role_name: 'admin',
-              permissions: ['dashboard.view', 'roles.view', 'delegations.manage'],
+              permissions: ['dashboard.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'],
             },
             target_roles: [
               { id: 2, role_name: 'manager', description: 'Manager role' },
@@ -63,6 +104,7 @@ vi.mock('../api/client', () => ({
           },
         });
       }
+
       if (url === '/delegations/users') {
         return Promise.resolve({
           data: {
@@ -83,6 +125,7 @@ vi.mock('../api/client', () => ({
           },
         });
       }
+
       if (url === '/delegations') {
         return Promise.resolve({
           data: {
@@ -107,6 +150,7 @@ vi.mock('../api/client', () => ({
           },
         });
       }
+
       return Promise.resolve({ data: { items: [] } });
     }),
     post: vi.fn(() => Promise.resolve({ data: { item: { id: 1 } } })),
@@ -119,7 +163,7 @@ vi.mock('../api/client', () => ({
           email: 'admin@example.com',
           phone: '090000001',
           role: 'admin',
-          permissions: ['dashboard.view', 'roles.view', 'delegations.manage'],
+          permissions: ['dashboard.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'],
           delegated_permission_sources: [],
         },
       },
@@ -150,12 +194,13 @@ beforeEach(() => {
       id: 1,
       full_name: 'Admin User',
       role: 'admin',
-      permissions: ['dashboard.view', 'roles.view', 'delegations.manage'],
+      permissions: ['dashboard.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'],
       delegated_permission_sources: [],
     },
     login: vi.fn(),
     logout: vi.fn(),
-    hasPermission: (permission) => ['dashboard.view', 'roles.view', 'delegations.manage'].includes(permission),
+    updateProfile: vi.fn(),
+    hasPermission: (permission) => ['dashboard.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'].includes(permission),
   };
 });
 
@@ -171,10 +216,11 @@ test('filters navigation items by permission', () => {
       id: 2,
       full_name: 'Manager User',
       role: 'manager',
-      permissions: ['dashboard.view', 'delegations.manage'],
+      permissions: ['dashboard.view', 'delegations.manage', 'employees.view', 'employees.manage'],
       delegated_permission_sources: [],
     },
-    hasPermission: (permission) => ['dashboard.view', 'delegations.manage'].includes(permission),
+    updateProfile: vi.fn(),
+    hasPermission: (permission) => ['dashboard.view', 'delegations.manage', 'employees.view', 'employees.manage'].includes(permission),
   };
 
   renderWithProviders(
@@ -186,8 +232,10 @@ test('filters navigation items by permission', () => {
   );
 
   expect(screen.getByText(/Tổng quan quyền/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/Nhân sự/i).length).toBeGreaterThan(0);
   expect(screen.getByText(/Ủy quyền quyền hạn/i)).toBeInTheDocument();
-  expect(screen.queryByText(/Vai trò và quyền/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/^Tài khoản$/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/^Vai trò và quyền$/i)).not.toBeInTheDocument();
 });
 
 test('renders role matrix page', async () => {
@@ -195,6 +243,18 @@ test('renders role matrix page', async () => {
   await waitFor(() => expect(screen.getByText(/Ma trận vai trò và quyền/i)).toBeInTheDocument());
   expect(screen.getByText(/^admin$/i)).toBeInTheDocument();
   expect(screen.getAllByText(/roles.view/i).length).toBeGreaterThan(0);
+});
+
+test('renders users page', async () => {
+  renderWithProviders(<UsersPage />, '/users');
+  await waitFor(() => expect(screen.getAllByText(/Tài khoản người dùng/i).length).toBeGreaterThan(0));
+  expect(screen.getAllByText(/Admin User/i).length).toBeGreaterThan(0);
+});
+
+test('renders employees page', async () => {
+  renderWithProviders(<EmployeesPage />, '/employees');
+  await waitFor(() => expect(screen.getAllByText(/Nhân sự/i).length).toBeGreaterThan(0));
+  expect(screen.getByText(/EMP001/i)).toBeInTheDocument();
 });
 
 test('renders delegation page', async () => {
@@ -246,6 +306,7 @@ test('redirects unauthorized users to forbidden page', async () => {
       permissions: ['dashboard.view'],
       delegated_permission_sources: [],
     },
+    updateProfile: vi.fn(),
     hasPermission: (permission) => permission === 'dashboard.view',
   };
 

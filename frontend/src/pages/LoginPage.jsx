@@ -20,7 +20,7 @@ function LoginPage() {
             Đăng nhập một lần, vào đúng màn hình, thấy đúng quyền.
           </Typography.Title>
           <Typography.Paragraph style={{ color: 'rgba(255, 245, 229, 0.8)', fontSize: 16 }}>
-            Module 1 tập trung vào JWT authentication, ma trận quyền, route guard và ủy quyền quyền hạn theo từng user.
+            Hệ thống hiện đã có xác thực JWT, phân quyền theo vai trò, ủy quyền theo từng user và quản lý tài khoản, nhân sự ở mức nền tảng.
           </Typography.Paragraph>
         </div>
 

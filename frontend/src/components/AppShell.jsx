@@ -52,7 +52,7 @@ function AppShell() {
           </div>
           {!collapsed ? (
             <Typography.Text className="sidebar-brand-text">
-              Xác thực & phân quyền
+              Kho thông minh
             </Typography.Text>
           ) : null}
         </div>
@@ -89,10 +89,10 @@ function AppShell() {
                 />
                 <div>
                   <Typography.Title level={4} style={{ margin: 0, fontFamily: '"Space Grotesk", sans-serif' }}>
-                    Nền tảng đăng nhập và phân quyền
+                    Hệ thống quản lý kho thông minh
                   </Typography.Title>
                   <Typography.Text type="secondary">
-                    Kiểm tra JWT, route guard, ma trận quyền và cơ chế ủy quyền theo từng user trong 5 vai trò hệ thống.
+                    Quản lý tài khoản, nhân sự và phân quyền trên cùng một không gian làm việc rõ ràng, dễ dùng.
                   </Typography.Text>
                 </div>
               </Space>

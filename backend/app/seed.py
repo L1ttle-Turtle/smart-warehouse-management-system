@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .constants import DEFAULT_ROLE_PASSWORDS, RESOURCE_PERMISSIONS, ROLE_PERMISSION_MAP
 from .extensions import db
-from .models import Permission, Role, User
+from .models import Employee, Permission, Role, User
 
 
 def seed_roles_and_permissions():
@@ -51,7 +51,27 @@ def seed_default_users():
         db.session.add(user)
 
 
+def seed_default_employees():
+    seeded_users = User.query.order_by(User.id.asc()).all()
+    for index, user in enumerate(seeded_users, start=1):
+        employee = Employee.query.filter_by(user_id=user.id).first()
+        if employee:
+            continue
+        employee = Employee(
+            employee_code=f"EMP{index:03d}",
+            user_id=user.id,
+            full_name=user.full_name,
+            department="Van hanh" if user.role.role_name in {"staff", "shipper"} else "Quan tri",
+            position=user.role.role_name.title(),
+            phone=user.phone,
+            email=user.email,
+            status="active",
+        )
+        db.session.add(employee)
+
+
 def seed_all():
     seed_roles_and_permissions()
     seed_default_users()
+    seed_default_employees()
     db.session.commit()

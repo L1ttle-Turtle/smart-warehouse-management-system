@@ -100,6 +100,22 @@ class UserPermissionDelegation(db.Model, SerializerMixin, TimestampMixin):
     permission = db.relationship("Permission", back_populates="delegations")
 
 
+class Employee(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "employees"
+
+    id = db.Column(db.Integer, primary_key=True)
+    employee_code = db.Column(db.String(30), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), unique=True)
+    full_name = db.Column(db.String(120), nullable=False)
+    department = db.Column(db.String(120))
+    position = db.Column(db.String(120))
+    phone = db.Column(db.String(20))
+    email = db.Column(db.String(120))
+    status = db.Column(db.String(20), default="active", nullable=False)
+
+    user = db.relationship("User", back_populates="employee", foreign_keys=[user_id])
+
+
 class User(db.Model, SerializerMixin, TimestampMixin):
     __tablename__ = "users"
 
@@ -113,6 +129,7 @@ class User(db.Model, SerializerMixin, TimestampMixin):
     status = db.Column(db.String(20), default="active", nullable=False)
 
     role = db.relationship("Role", back_populates="users")
+    employee = db.relationship("Employee", back_populates="user", uselist=False)
     delegations_granted = db.relationship(
         "UserPermissionDelegation",
         back_populates="grantor_user",

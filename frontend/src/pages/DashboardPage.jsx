@@ -9,10 +9,10 @@ function DashboardPage() {
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
       <Card className="page-card" styles={{ body: { padding: 28 } }}>
         <Typography.Title level={2} className="page-title">
-          Module 1 đã sẵn sàng nghiệm thu
+          Nền tảng quản trị đang sẵn sàng vận hành
         </Typography.Title>
         <Typography.Paragraph className="page-subtitle">
-          Trang này dùng để kiểm tra thông tin phiên đăng nhập, vai trò hiện tại và các quyền đã được cấp.
+          Trang này dùng để kiểm tra thông tin phiên đăng nhập, vai trò hiện tại, quyền đang có và các quyền được cấp riêng cho tài khoản.
         </Typography.Paragraph>
       </Card>
 

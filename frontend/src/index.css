@@ -101,6 +101,87 @@ body {
   font-size: 0.95rem;
 }
 
+.resource-eyebrow {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #1f6f5f;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.resource-hero {
+  overflow: hidden;
+  position: relative;
+}
+
+.resource-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top right, rgba(255, 204, 122, 0.18), transparent 30%),
+    radial-gradient(circle at bottom left, rgba(31, 111, 95, 0.12), transparent 35%);
+  pointer-events: none;
+}
+
+.resource-hero__content {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.resource-hero__main {
+  max-width: 760px;
+}
+
+.resource-tip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(31, 111, 95, 0.16);
+  background: rgba(255, 250, 241, 0.92);
+}
+
+.resource-stats {
+  position: relative;
+  margin-top: 18px;
+}
+
+.resource-stat {
+  height: 100%;
+}
+
+.resource-stat--primary {
+  background: linear-gradient(180deg, rgba(255, 251, 243, 0.98) 0%, rgba(248, 238, 222, 0.95) 100%);
+}
+
+.resource-stat--success {
+  background: linear-gradient(180deg, rgba(245, 252, 249, 0.98) 0%, rgba(227, 244, 238, 0.96) 100%);
+}
+
+.resource-stat--warning {
+  background: linear-gradient(180deg, rgba(255, 249, 239, 0.98) 0%, rgba(252, 237, 207, 0.96) 100%);
+}
+
+.resource-toolbar {
+  margin-bottom: 18px;
+  align-items: center;
+}
+
+.resource-form-card {
+  border-radius: 20px;
+}
+
+.resource-drawer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 4px;
+}
+
 .grid-two {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -243,5 +324,16 @@ body {
 
   .page-title {
     font-size: 1.35rem;
+  }
+
+  .resource-hero__content,
+  .resource-drawer-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .resource-toolbar .ant-input-affix-wrapper,
+  .resource-toolbar .ant-select {
+    width: 100% !important;
   }
 }

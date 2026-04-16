@@ -1,7 +1,11 @@
 RESOURCE_PERMISSIONS = {
     "dashboard.view",
     "delegations.manage",
+    "employees.manage",
+    "employees.view",
     "roles.view",
+    "users.manage",
+    "users.view",
 }
 
 ROLE_DELEGATION_ALLOWED_TARGETS = {
@@ -16,11 +20,17 @@ ROLE_PERMISSION_MAP = {
     "admin": [
         "dashboard.view",
         "delegations.manage",
+        "employees.manage",
+        "employees.view",
         "roles.view",
+        "users.manage",
+        "users.view",
     ],
     "manager": [
         "dashboard.view",
         "delegations.manage",
+        "employees.manage",
+        "employees.view",
     ],
     "staff": [
         "dashboard.view",

@@ -8,10 +8,12 @@ import { useAuth } from './auth/useAuth';
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const DelegationPage = lazy(() => import('./pages/DelegationPage'));
+const EmployeesPage = lazy(() => import('./pages/EmployeesPage'));
 const ForbiddenPage = lazy(() => import('./pages/ForbiddenPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const RolesPage = lazy(() => import('./pages/RolesPage'));
+const UsersPage = lazy(() => import('./pages/UsersPage'));
 
 function RouteLoader() {
   return (
@@ -48,6 +50,22 @@ function App() {
           )}
         >
           <Route index element={<DashboardPage />} />
+          <Route
+            path="users"
+            element={(
+              <ProtectedRoute requiredPermission="users.view">
+                <UsersPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="employees"
+            element={(
+              <ProtectedRoute requiredPermission="employees.view">
+                <EmployeesPage />
+              </ProtectedRoute>
+            )}
+          />
           <Route path="profile" element={<ProfilePage />} />
           <Route
             path="delegations"
