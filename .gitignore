@@ -1,0 +1,13 @@
+node_modules/
+frontend/node_modules/
+frontend/dist/
+backend/__pycache__/
+backend/.pytest_cache/
+backend/instance/
+backend/migrations/__pycache__/
+*.pyc
+*.pyo
+*.sqlite3
+*.db
+.env
+.venv/
