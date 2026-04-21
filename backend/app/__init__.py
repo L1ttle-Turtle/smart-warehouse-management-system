@@ -4,6 +4,7 @@ import os
 
 from flask import Flask, jsonify
 from flask_migrate import upgrade
+from marshmallow import ValidationError
 
 from .config import Config, TestConfig
 from .extensions import bcrypt, cors, db, jwt, migrate, socketio
@@ -58,9 +59,12 @@ def create_app(config_object=None):
     @app.errorhandler(404)
     @app.errorhandler(409)
     @app.errorhandler(422)
+    @app.errorhandler(ValidationError)
     @app.errorhandler(500)
     def handle_error(error):
         code = getattr(error, "code", 500)
+        if isinstance(error, ValidationError):
+            return jsonify({"message": error.normalized_messages()}), 422
         return jsonify({"message": getattr(error, "description", str(error))}), code
 
     return app

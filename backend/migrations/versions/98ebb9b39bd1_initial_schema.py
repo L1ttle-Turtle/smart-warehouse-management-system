@@ -62,6 +62,24 @@ def upgrade():
         sa.UniqueConstraint("username"),
     )
     op.create_table(
+        "employees",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("employee_code", sa.String(length=30), nullable=False),
+        sa.Column("user_id", sa.Integer(), nullable=True),
+        sa.Column("full_name", sa.String(length=120), nullable=False),
+        sa.Column("department", sa.String(length=120), nullable=True),
+        sa.Column("position", sa.String(length=120), nullable=True),
+        sa.Column("phone", sa.String(length=20), nullable=True),
+        sa.Column("email", sa.String(length=120), nullable=True),
+        sa.Column("status", sa.String(length=20), nullable=False),
+        sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("employee_code"),
+        sa.UniqueConstraint("user_id"),
+    )
+    op.create_table(
         "user_permission_delegations",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("grantor_user_id", sa.Integer(), nullable=False),
@@ -89,6 +107,7 @@ def upgrade():
 
 def downgrade():
     op.drop_table("user_permission_delegations")
+    op.drop_table("employees")
     op.drop_table("users")
     op.drop_table("role_permissions")
     op.drop_table("roles")

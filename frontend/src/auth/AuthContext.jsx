@@ -48,6 +48,7 @@ export function AuthProvider({ children }) {
     setToken(nextToken);
     setUser(nextUser);
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ token: nextToken }));
+    return nextUser;
   }, []);
 
   const logout = useCallback(async () => {

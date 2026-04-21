@@ -1,14 +1,17 @@
 import { ConfigProvider } from 'antd';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/ProtectedRoute';
+import AuditLogsPage from './AuditLogsPage';
 import DelegationPage from './DelegationPage';
+import EmployeesPage from './EmployeesPage';
 import LoginPage from './LoginPage';
 import ProfilePage from './ProfilePage';
 import RolesPage from './RolesPage';
+import UsersPage from './UsersPage';
 
 let authState = {
   loading: false,
@@ -17,12 +20,14 @@ let authState = {
     id: 1,
     full_name: 'Admin User',
     role: 'admin',
-    permissions: ['dashboard.view', 'roles.view', 'delegations.manage'],
+    must_change_password: false,
+    permissions: ['dashboard.view', 'audit_logs.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'],
     delegated_permission_sources: [],
   },
-  login: vi.fn(),
+  login: vi.fn(async () => ({ must_change_password: false })),
   logout: vi.fn(),
-  hasPermission: (permission) => ['dashboard.view', 'roles.view', 'delegations.manage'].includes(permission),
+  updateProfile: vi.fn(),
+  hasPermission: (permission) => ['dashboard.view', 'audit_logs.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'].includes(permission),
 };
 
 vi.mock('../api/client', () => ({
@@ -37,14 +42,59 @@ vi.mock('../api/client', () => ({
                 role_name: 'admin',
                 description: 'Admin role',
                 user_count: 1,
-                base_permissions: ['dashboard.view', 'roles.view', 'delegations.manage'],
+                base_permissions: ['dashboard.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'],
                 delegated_permissions: [],
-                effective_permissions: ['dashboard.view', 'roles.view', 'delegations.manage'],
+                effective_permissions: ['dashboard.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'],
               },
             ],
           },
         });
       }
+
+      if (url === '/users') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                username: 'admin',
+                full_name: 'Admin User',
+                email: 'admin@example.com',
+                role: 'admin',
+                employee_code: 'EMP001',
+                status: 'active',
+                must_change_password: false,
+              },
+            ],
+            total: 1,
+            page: 1,
+            page_size: 10,
+          },
+        });
+      }
+
+      if (url === '/employees') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                employee_code: 'EMP001',
+                username: 'admin',
+                full_name: 'Admin User',
+                department: 'Quản trị',
+                position: 'Admin',
+                role: 'admin',
+                status: 'active',
+              },
+            ],
+            total: 1,
+            page: 1,
+            page_size: 10,
+          },
+        });
+      }
+
       if (url === '/delegations/meta') {
         return Promise.resolve({
           data: {
@@ -52,7 +102,7 @@ vi.mock('../api/client', () => ({
               user_id: 1,
               full_name: 'Admin User',
               role_name: 'admin',
-              permissions: ['dashboard.view', 'roles.view', 'delegations.manage'],
+              permissions: ['dashboard.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'],
             },
             target_roles: [
               { id: 2, role_name: 'manager', description: 'Manager role' },
@@ -63,6 +113,7 @@ vi.mock('../api/client', () => ({
           },
         });
       }
+
       if (url === '/delegations/users') {
         return Promise.resolve({
           data: {
@@ -83,6 +134,7 @@ vi.mock('../api/client', () => ({
           },
         });
       }
+
       if (url === '/delegations') {
         return Promise.resolve({
           data: {
@@ -101,12 +153,76 @@ vi.mock('../api/client', () => ({
                 grantor_role_id: 1,
                 grantor_role_name: 'admin',
                 note: '',
+                status: 'active',
                 created_at: '2026-04-16T08:00:00',
               },
             ],
           },
         });
       }
+
+      if (url === '/audit-logs') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                action: 'users.created',
+                entity_type: 'user',
+                entity_label: 'admin',
+                actor_user_name: 'Admin User',
+                target_user_name: 'Admin User',
+                description: 'Tạo tài khoản admin.',
+                created_at: '2026-04-16T08:00:00',
+              },
+            ],
+            total: 1,
+            page: 1,
+            page_size: 10,
+          },
+        });
+      }
+
+      if (url === '/dashboard/identity') {
+        return Promise.resolve({
+          data: {
+            profile: {
+              username: 'admin',
+              full_name: 'Admin User',
+              role: 'admin',
+              must_change_password: false,
+              last_login_at: '2026-04-16T08:00:00',
+            },
+            employee: {
+              employee_code: 'EMP001',
+              department: 'Quản trị',
+              position: 'Admin',
+              status: 'active',
+            },
+            permission_summary: {
+              total_permissions: 7,
+              delegated_permissions: 0,
+              role_permissions: 7,
+            },
+            delegation_summary: {
+              active_received: 0,
+              active_granted: 1,
+              expiring_soon: 0,
+            },
+            management_summary: {
+              total_users: 5,
+              total_employees: 5,
+              must_change_password_users: 1,
+            },
+            audit_summary: {
+              total_logs: 4,
+              today_logins: 2,
+            },
+            recent_activity: [],
+          },
+        });
+      }
+
       return Promise.resolve({ data: { items: [] } });
     }),
     post: vi.fn(() => Promise.resolve({ data: { item: { id: 1 } } })),
@@ -119,12 +235,13 @@ vi.mock('../api/client', () => ({
           email: 'admin@example.com',
           phone: '090000001',
           role: 'admin',
-          permissions: ['dashboard.view', 'roles.view', 'delegations.manage'],
+          must_change_password: false,
+          permissions: ['dashboard.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'],
           delegated_permission_sources: [],
         },
       },
     })),
-    delete: vi.fn(() => Promise.resolve({ data: { message: 'ok' } })),
+    delete: vi.fn(() => Promise.resolve({ data: { message: 'ok', item: { status: 'revoked' } } })),
   },
 }));
 
@@ -150,12 +267,14 @@ beforeEach(() => {
       id: 1,
       full_name: 'Admin User',
       role: 'admin',
-      permissions: ['dashboard.view', 'roles.view', 'delegations.manage'],
+      must_change_password: false,
+      permissions: ['dashboard.view', 'audit_logs.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'],
       delegated_permission_sources: [],
     },
-    login: vi.fn(),
+    login: vi.fn(async () => ({ must_change_password: false })),
     logout: vi.fn(),
-    hasPermission: (permission) => ['dashboard.view', 'roles.view', 'delegations.manage'].includes(permission),
+    updateProfile: vi.fn(),
+    hasPermission: (permission) => ['dashboard.view', 'audit_logs.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'].includes(permission),
   };
 });
 
@@ -171,10 +290,12 @@ test('filters navigation items by permission', () => {
       id: 2,
       full_name: 'Manager User',
       role: 'manager',
-      permissions: ['dashboard.view', 'delegations.manage'],
+      must_change_password: false,
+      permissions: ['dashboard.view', 'audit_logs.view', 'delegations.manage', 'employees.view', 'employees.manage'],
       delegated_permission_sources: [],
     },
-    hasPermission: (permission) => ['dashboard.view', 'delegations.manage'].includes(permission),
+    updateProfile: vi.fn(),
+    hasPermission: (permission) => ['dashboard.view', 'audit_logs.view', 'delegations.manage', 'employees.view', 'employees.manage'].includes(permission),
   };
 
   renderWithProviders(
@@ -185,9 +306,12 @@ test('filters navigation items by permission', () => {
     </Routes>,
   );
 
-  expect(screen.getByText(/Tổng quan quyền/i)).toBeInTheDocument();
+  expect(screen.getByText(/Dashboard cá nhân/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/Nhân sự/i).length).toBeGreaterThan(0);
   expect(screen.getByText(/Ủy quyền quyền hạn/i)).toBeInTheDocument();
-  expect(screen.queryByText(/Vai trò và quyền/i)).not.toBeInTheDocument();
+  expect(screen.getByText(/Audit log/i)).toBeInTheDocument();
+  expect(screen.queryByText(/^Tài khoản$/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/^Vai trò và quyền$/i)).not.toBeInTheDocument();
 });
 
 test('renders role matrix page', async () => {
@@ -195,6 +319,18 @@ test('renders role matrix page', async () => {
   await waitFor(() => expect(screen.getByText(/Ma trận vai trò và quyền/i)).toBeInTheDocument());
   expect(screen.getByText(/^admin$/i)).toBeInTheDocument();
   expect(screen.getAllByText(/roles.view/i).length).toBeGreaterThan(0);
+});
+
+test('renders users page', async () => {
+  renderWithProviders(<UsersPage />, '/users');
+  await waitFor(() => expect(screen.getAllByText(/Tài khoản người dùng/i).length).toBeGreaterThan(0));
+  expect(screen.getAllByText(/Admin User/i).length).toBeGreaterThan(0);
+});
+
+test('renders employees page', async () => {
+  renderWithProviders(<EmployeesPage />, '/employees');
+  await waitFor(() => expect(screen.getAllByText(/Nhân sự/i).length).toBeGreaterThan(0));
+  await waitFor(() => expect(screen.getByText(/EMP001/i)).toBeInTheDocument());
 });
 
 test('renders delegation page', async () => {
@@ -210,6 +346,12 @@ test('renders profile page', async () => {
   await waitFor(() => expect(screen.getByText(/Hồ sơ cá nhân/i)).toBeInTheDocument());
   expect(screen.getByRole('heading', { name: /Cập nhật thông tin liên hệ/i })).toBeInTheDocument();
   expect(screen.getAllByText(/Đổi mật khẩu/i).length).toBeGreaterThan(0);
+});
+
+test('renders audit logs page', async () => {
+  renderWithProviders(<AuditLogsPage />, '/audit-logs');
+  await waitFor(() => expect(screen.getAllByText(/Audit log/i).length).toBeGreaterThan(0));
+  await waitFor(() => expect(screen.getAllByText(/users.created/i).length).toBeGreaterThan(0));
 });
 
 test('redirects unauthenticated users to login', async () => {
@@ -243,9 +385,11 @@ test('redirects unauthorized users to forbidden page', async () => {
       id: 3,
       full_name: 'Staff User',
       role: 'staff',
+      must_change_password: false,
       permissions: ['dashboard.view'],
       delegated_permission_sources: [],
     },
+    updateProfile: vi.fn(),
     hasPermission: (permission) => permission === 'dashboard.view',
   };
 

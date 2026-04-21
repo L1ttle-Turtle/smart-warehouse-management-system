@@ -20,11 +20,12 @@ function LoginPage() {
             Đăng nhập một lần, vào đúng màn hình, thấy đúng quyền.
           </Typography.Title>
           <Typography.Paragraph style={{ color: 'rgba(255, 245, 229, 0.8)', fontSize: 16 }}>
-            Module 1 tập trung vào JWT authentication, ma trận quyền, route guard và ủy quyền quyền hạn theo từng user.
+            Hệ thống hiện đã có xác thực JWT, phân quyền theo vai trò, ủy quyền theo từng user,
+            đổi mật khẩu theo policy và dashboard riêng cho từng nhóm người dùng.
           </Typography.Paragraph>
         </div>
 
-        <Space direction="vertical" size={8}>
+        <Space orientation="vertical" size={8}>
           <Typography.Text style={{ color: 'rgba(255, 245, 229, 0.82)' }}>
             Tài khoản seed: admin, manager, staff, accountant, shipper
           </Typography.Text>
@@ -48,7 +49,11 @@ function LoginPage() {
             onFinish={async (values) => {
               setLoading(true);
               try {
-                await login(values);
+                const nextUser = await login(values);
+                if (nextUser?.must_change_password) {
+                  navigate('/profile?forcePasswordReset=1', { replace: true });
+                  return;
+                }
                 navigate(location.state?.from?.pathname || '/', { replace: true });
               } catch (error) {
                 message.error(error.response?.data?.message || 'Đăng nhập thất bại.');
@@ -60,8 +65,8 @@ function LoginPage() {
           >
             <Form.Item
               name="username"
-              label="Username"
-              rules={[{ required: true, message: 'Nhập username' }]}
+              label="Tên đăng nhập"
+              rules={[{ required: true, message: 'Nhập tên đăng nhập' }]}
             >
               <Input prefix={<UserOutlined />} size="large" />
             </Form.Item>

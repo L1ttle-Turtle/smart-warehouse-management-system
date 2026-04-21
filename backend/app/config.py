@@ -2,8 +2,8 @@ import os
 
 
 class Config:
-    SECRET_KEY = os.getenv("SECRET_KEY", "warehouse-secret")
-    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "warehouse-jwt-secret")
+    SECRET_KEY = os.getenv("SECRET_KEY", "warehouse-secret-key-with-32-plus-characters")
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "warehouse-jwt-secret-key-with-32-plus-characters")
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL",
         "sqlite:///warehouse.db",

@@ -1,10 +1,20 @@
-import { Button, Card, Col, Form, Input, Row, Space, Tag, Typography, message } from 'antd';
+import { Alert, Button, Card, Col, Form, Input, Row, Space, Tag, Typography, message } from 'antd';
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 
 import { useAuth } from '../auth/useAuth';
 
+const passwordRules = [
+  'Tối thiểu 8 ký tự',
+  'Có ít nhất 1 chữ hoa',
+  'Có ít nhất 1 chữ thường',
+  'Có ít nhất 1 chữ số',
+  'Có ít nhất 1 ký tự đặc biệt',
+];
+
 function ProfilePage() {
   const { user, updateProfile } = useAuth();
+  const location = useLocation();
   const [profileForm] = Form.useForm();
   const [passwordForm] = Form.useForm();
   const [savingProfile, setSavingProfile] = useState(false);
@@ -17,17 +27,28 @@ function ProfilePage() {
     });
   }, [profileForm, user]);
 
+  const forcePasswordReset = user?.must_change_password || new URLSearchParams(location.search).get('forcePasswordReset') === '1';
+
   return (
-    <Space direction="vertical" size={20} style={{ width: '100%' }}>
+    <Space orientation="vertical" size={20} style={{ width: '100%' }}>
       <Card className="page-card" styles={{ body: { padding: 28 } }}>
         <Typography.Title level={2} className="page-title">
           Hồ sơ cá nhân
         </Typography.Title>
         <Typography.Paragraph className="page-subtitle">
-          Trang này cho phép bạn tự cập nhật thông tin liên hệ và đổi mật khẩu mà không đụng sang
-          các module quản trị người dùng phía sau.
+          Trang này cho phép bạn tự cập nhật thông tin liên hệ và đổi mật khẩu mà không chạm sang
+          các module quản trị tài khoản phía sau.
         </Typography.Paragraph>
       </Card>
+
+      {forcePasswordReset ? (
+        <Alert
+          type="warning"
+          showIcon
+          message="Tài khoản này cần đổi mật khẩu trước khi tiếp tục sử dụng hệ thống"
+          description="Bạn vẫn có thể cập nhật email hoặc số điện thoại, nhưng vui lòng đổi mật khẩu ngay để gỡ trạng thái bắt buộc này."
+        />
+      ) : null}
 
       <Row gutter={[16, 16]}>
         <Col xs={24} md={8}>
@@ -38,7 +59,7 @@ function ProfilePage() {
         </Col>
         <Col xs={24} md={8}>
           <Card className="page-card" styles={{ body: { padding: 24 } }}>
-            <Typography.Text type="secondary">Username</Typography.Text>
+            <Typography.Text type="secondary">Tên đăng nhập</Typography.Text>
             <div className="metric-value">{user?.username || '-'}</div>
           </Card>
         </Col>
@@ -107,8 +128,16 @@ function ProfilePage() {
               Đổi mật khẩu
             </Typography.Title>
             <Typography.Paragraph type="secondary">
-              Để an toàn, bạn cần nhập mật khẩu hiện tại trước khi đặt mật khẩu mới.
+              Mật khẩu mới phải đáp ứng policy bảo mật bên dưới.
             </Typography.Paragraph>
+
+            <Space orientation="vertical" size={8} style={{ width: '100%', marginBottom: 20 }}>
+              {passwordRules.map((rule) => (
+                <Typography.Text key={rule} type="secondary">
+                  {`• ${rule}`}
+                </Typography.Text>
+              ))}
+            </Space>
 
             <Form
               form={passwordForm}
@@ -141,7 +170,22 @@ function ProfilePage() {
                 label="Mật khẩu mới"
                 rules={[
                   { required: true, message: 'Nhập mật khẩu mới' },
-                  { min: 6, message: 'Mật khẩu mới tối thiểu 6 ký tự' },
+                  { min: 8, message: 'Mật khẩu mới tối thiểu 8 ký tự' },
+                  {
+                    validator(_, value) {
+                      if (!value) {
+                        return Promise.resolve();
+                      }
+                      const hasUpper = /[A-Z]/.test(value);
+                      const hasLower = /[a-z]/.test(value);
+                      const hasDigit = /\d/.test(value);
+                      const hasSpecial = /[^A-Za-z0-9]/.test(value);
+                      if (hasUpper && hasLower && hasDigit && hasSpecial) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(new Error('Mật khẩu mới chưa đạt policy bảo mật.'));
+                    },
+                  },
                 ]}
               >
                 <Input.Password size="large" />

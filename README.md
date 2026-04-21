@@ -1,28 +1,29 @@
 # Warehouse IQ
 
-Trang thai hien tai cua repo: **Module 1 - Nen tang xac thuc va phan quyen**.
+Trạng thái hiện tại của repo: **Module 2 - Người dùng và nhân sự**.
 
-## Pham vi da hoan thanh
+## Phạm vi đã hoàn thành
 
-- Dang nhap JWT voi 5 vai tro: `admin`, `manager`, `staff`, `accountant`, `shipper`
-- API `login`, `me`, `logout`
-- API `roles` de xem role-permission matrix theo role
-- API va UI uy quyen quyen han theo **tung user**
-- Rule chan role cap thap nhu `staff`, `shipper` khong duoc nhan/dung quyen uy quyen tiep
-- Trang `Profile` cho moi user tu cap nhat:
-  - email
-  - so dien thoai
-  - mat khau
-- Frontend co:
-  - man hinh dang nhap
-  - route guard
-  - trang tong quan quyen cua tai khoan dang dang nhap
-  - trang role matrix chi cho user co quyen `roles.view`
-  - trang uy quyen theo user chi cho user co quyen `delegations.manage`
-  - trang ho so ca nhan
-  - trang `403 Forbidden`
+- Nền tảng xác thực và phân quyền của Module 1:
+  - Đăng nhập JWT với 5 vai trò `admin`, `manager`, `staff`, `accountant`, `shipper`
+  - API `login`, `me`, `logout`
+  - Ma trận quyền theo role
+  - Ủy quyền quyền hạn theo từng user
+  - Trang hồ sơ cá nhân để đổi email, số điện thoại, mật khẩu
+- Module 2:
+  - CRUD tài khoản người dùng
+  - CRUD hồ sơ nhân sự
+  - Liên kết `users` 1-1 với `employees` qua `user_id`
+  - Phân quyền:
+    - `admin` quản lý tài khoản và nhân sự
+    - `manager` quản lý nhân sự, không quản lý tài khoản
+  - Seed dữ liệu mẫu nhân sự tương ứng với 5 tài khoản mặc định
+  - Frontend có thêm:
+    - trang `Tài khoản`
+    - trang `Nhân sự`
+    - điều hướng sidebar theo quyền
 
-## Chay backend
+## Chạy backend
 
 ```powershell
 Set-Location -LiteralPath 'D:\Đồ án nghành\backend'
@@ -37,7 +38,7 @@ API health:
 
 - [http://localhost:5000/health](http://localhost:5000/health)
 
-## Chay frontend
+## Chạy frontend
 
 ```powershell
 Set-Location -LiteralPath 'D:\Đồ án nghành\frontend'
@@ -50,7 +51,7 @@ Frontend:
 
 - [http://localhost:5173](http://localhost:5173)
 
-## Tai khoan test
+## Tài khoản test
 
 - `admin / Admin@123`
 - `manager / Manager@123`
@@ -58,14 +59,14 @@ Frontend:
 - `accountant / Accountant@123`
 - `shipper / Shipper@123`
 
-## Kiem thu tu dong
+## Kiểm thử tự động
 
 ```powershell
 Set-Location -LiteralPath 'D:\Đồ án nghành\backend'
-pytest
+python -m pytest
 
 Set-Location -LiteralPath 'D:\Đồ án nghành\frontend'
 npm run lint
-npm run test
+npm run test -- --run
 npm run build
 ```

@@ -34,7 +34,7 @@ def test_login_rejects_invalid_credentials(client):
     )
 
     assert response.status_code == 401
-    assert response.get_json()["message"] == "Invalid username or password."
+    assert response.get_json()["message"] == "Sai tên đăng nhập hoặc mật khẩu."
 
 
 def test_me_returns_current_user(client, auth_headers):
@@ -74,14 +74,15 @@ def test_profile_can_change_password_with_current_password(client, auth_headers)
     response = client.patch(
         "/auth/profile",
         headers=auth_headers("staff", "Staff@123"),
-        json={"current_password": "Staff@123", "new_password": "Staff@456"},
+        json={"current_password": "Staff@123", "new_password": "Staff@456!"},
     )
 
     assert response.status_code == 200
+    assert response.get_json()["user"]["must_change_password"] is False
 
     login_response = client.post(
         "/auth/login",
-        json={"username": "staff", "password": "Staff@456"},
+        json={"username": "staff", "password": "Staff@456!"},
     )
     assert login_response.status_code == 200
 
@@ -90,11 +91,21 @@ def test_profile_rejects_wrong_current_password(client, auth_headers):
     response = client.patch(
         "/auth/profile",
         headers=auth_headers("staff", "Staff@123"),
-        json={"current_password": "Wrong@123", "new_password": "Staff@456"},
+        json={"current_password": "Wrong@123", "new_password": "Staff@456!"},
     )
 
     assert response.status_code == 400
     assert response.get_json()["message"] == "Mật khẩu hiện tại không chính xác."
+
+
+def test_profile_rejects_weak_password(client, auth_headers):
+    response = client.patch(
+        "/auth/profile",
+        headers=auth_headers("staff", "Staff@123"),
+        json={"current_password": "Staff@123", "new_password": "weak"},
+    )
+
+    assert response.status_code == 422
 
 
 def test_lowest_role_cannot_effectively_receive_delegation_manage_permission(client, auth_headers, app):
