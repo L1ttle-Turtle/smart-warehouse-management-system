@@ -35,6 +35,15 @@ body {
 .app-layout {
   min-height: 100vh;
   background: transparent;
+  align-items: flex-start;
+}
+
+.app-sider {
+  position: sticky !important;
+  top: 0;
+  height: 100vh;
+  overflow: auto;
+  align-self: flex-start;
 }
 
 .brand-mark {
@@ -318,6 +327,11 @@ body {
 }
 
 @media (max-width: 768px) {
+  .app-sider {
+    position: static !important;
+    height: auto;
+  }
+
   .page-shell {
     padding: 14px;
   }

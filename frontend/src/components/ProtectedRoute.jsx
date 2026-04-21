@@ -5,7 +5,7 @@ import { useAuth } from '../auth/useAuth';
 
 function ProtectedRoute({ children, requiredPermission = null }) {
   const location = useLocation();
-  const { loading, isAuthenticated, hasPermission } = useAuth();
+  const { loading, isAuthenticated, hasPermission, user } = useAuth();
 
   if (loading) {
     return (
@@ -17,6 +17,16 @@ function ProtectedRoute({ children, requiredPermission = null }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (user?.must_change_password && location.pathname !== '/profile') {
+    return (
+      <Navigate
+        to="/profile?forcePasswordReset=1"
+        state={{ from: location }}
+        replace
+      />
+    );
   }
 
   if (requiredPermission && !hasPermission(requiredPermission)) {

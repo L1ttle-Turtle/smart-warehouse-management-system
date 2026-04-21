@@ -41,6 +41,7 @@ function AppShell() {
         collapsed={collapsed}
         onCollapse={setCollapsed}
         width={260}
+        className="app-sider"
         style={{
           background: 'var(--bg-sidebar)',
           boxShadow: '18px 0 48px rgba(17, 51, 47, 0.22)',

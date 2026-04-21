@@ -45,6 +45,7 @@ def seed_default_users():
             email=f"{role_name}@warehouse.local",
             phone=f"09000000{index}",
             status="active",
+            must_change_password=False,
             role=role_lookup[role_name],
         )
         user.set_password(DEFAULT_ROLE_PASSWORDS[role_name])

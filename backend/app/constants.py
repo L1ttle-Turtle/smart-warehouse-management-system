@@ -1,4 +1,5 @@
 RESOURCE_PERMISSIONS = {
+    "audit_logs.view",
     "dashboard.view",
     "delegations.manage",
     "employees.manage",
@@ -18,6 +19,7 @@ ROLE_DELEGATION_ALLOWED_TARGETS = {
 
 ROLE_PERMISSION_MAP = {
     "admin": [
+        "audit_logs.view",
         "dashboard.view",
         "delegations.manage",
         "employees.manage",
@@ -27,6 +29,7 @@ ROLE_PERMISSION_MAP = {
         "users.view",
     ],
     "manager": [
+        "audit_logs.view",
         "dashboard.view",
         "delegations.manage",
         "employees.manage",

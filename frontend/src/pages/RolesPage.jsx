@@ -23,7 +23,9 @@ function RolesPage() {
         Ma trận vai trò và quyền
       </Typography.Title>
       <Typography.Paragraph className="page-subtitle">
-        Màn hình này chỉ mở cho tài khoản có quyền <code>roles.view</code>. Bảng bên dưới thể hiện quyền gốc theo từng vai trò. Các quyền được ủy quyền riêng cho từng user sẽ được quản lý ở màn hình ủy quyền.
+        Màn hình này chỉ mở cho tài khoản có quyền <code>roles.view</code>. Bảng bên dưới thể hiện
+        quyền gốc theo từng vai trò. Các quyền được ủy quyền riêng cho từng user sẽ được quản lý ở
+        màn hình ủy quyền.
       </Typography.Paragraph>
 
       {error ? (

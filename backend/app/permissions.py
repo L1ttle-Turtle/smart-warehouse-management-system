@@ -1,6 +1,6 @@
 from functools import wraps
 
-from flask import abort, g
+from flask import abort, g, request
 from flask_jwt_extended import get_jwt_identity
 
 from .extensions import db
@@ -29,6 +29,15 @@ def permission_required(*permissions, any_of=False):
         @wraps(fn)
         def wrapper(*args, **kwargs):
             user = get_current_user()
+            if user.must_change_password and request.endpoint not in {
+                "auth.me",
+                "auth.update_profile",
+                "auth.logout",
+            }:
+                abort(
+                    403,
+                    description="Tài khoản này phải đổi mật khẩu trước khi tiếp tục sử dụng hệ thống.",
+                )
             granted = set(user.permission_names)
             if not permissions:
                 return fn(*args, **kwargs)
