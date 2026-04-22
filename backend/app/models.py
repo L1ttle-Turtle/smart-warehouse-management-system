@@ -167,6 +167,178 @@ class Employee(db.Model, SerializerMixin, TimestampMixin):
     user = db.relationship("User", back_populates="employee", foreign_keys=[user_id])
 
 
+class Category(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "categories"
+
+    id = db.Column(db.Integer, primary_key=True)
+    category_name = db.Column(db.String(120), unique=True, nullable=False)
+    description = db.Column(db.String(255))
+
+    products = db.relationship(
+        "Product",
+        back_populates="category",
+        order_by="Product.product_code",
+    )
+
+
+class Supplier(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "suppliers"
+
+    id = db.Column(db.Integer, primary_key=True)
+    supplier_code = db.Column(db.String(30), unique=True, nullable=False)
+    supplier_name = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(120))
+    phone = db.Column(db.String(20))
+    address = db.Column(db.String(255))
+    status = db.Column(db.String(20), default="active", nullable=False)
+
+
+class Customer(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "customers"
+
+    id = db.Column(db.Integer, primary_key=True)
+    customer_code = db.Column(db.String(30), unique=True, nullable=False)
+    customer_name = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(120))
+    phone = db.Column(db.String(20))
+    address = db.Column(db.String(255))
+    status = db.Column(db.String(20), default="active", nullable=False)
+
+
+class BankAccount(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "bank_accounts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    bank_name = db.Column(db.String(120), nullable=False)
+    account_number = db.Column(db.String(50), unique=True, nullable=False)
+    account_holder = db.Column(db.String(120), nullable=False)
+    branch = db.Column(db.String(120))
+    status = db.Column(db.String(20), default="active", nullable=False)
+
+
+class Warehouse(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "warehouses"
+
+    id = db.Column(db.Integer, primary_key=True)
+    warehouse_code = db.Column(db.String(30), unique=True, nullable=False)
+    warehouse_name = db.Column(db.String(120), nullable=False)
+    address = db.Column(db.String(255))
+    status = db.Column(db.String(20), default="active", nullable=False)
+
+    locations = db.relationship(
+        "WarehouseLocation",
+        back_populates="warehouse",
+        cascade="all, delete-orphan",
+        order_by="WarehouseLocation.location_code",
+    )
+    inventory_rows = db.relationship(
+        "Inventory",
+        back_populates="warehouse",
+        cascade="all, delete-orphan",
+    )
+    movements = db.relationship(
+        "InventoryMovement",
+        back_populates="warehouse",
+    )
+
+
+class WarehouseLocation(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "warehouse_locations"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "warehouse_id",
+            "location_code",
+            name="uq_warehouse_location_code",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    warehouse_id = db.Column(db.Integer, db.ForeignKey("warehouses.id"), nullable=False)
+    location_code = db.Column(db.String(30), nullable=False)
+    location_name = db.Column(db.String(120), nullable=False)
+    status = db.Column(db.String(20), default="active", nullable=False)
+
+    warehouse = db.relationship("Warehouse", back_populates="locations")
+    inventory_rows = db.relationship(
+        "Inventory",
+        back_populates="location",
+        cascade="all, delete-orphan",
+    )
+    movements = db.relationship(
+        "InventoryMovement",
+        back_populates="location",
+    )
+
+
+class Product(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "products"
+
+    id = db.Column(db.Integer, primary_key=True)
+    product_code = db.Column(db.String(30), unique=True, nullable=False)
+    product_name = db.Column(db.String(120), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey("categories.id"))
+    quantity_total = db.Column(db.Float, default=0, nullable=False)
+    min_stock = db.Column(db.Float, default=0, nullable=False)
+    status = db.Column(db.String(20), default="active", nullable=False)
+    description = db.Column(db.String(255))
+
+    category = db.relationship("Category", back_populates="products")
+
+    inventory_rows = db.relationship(
+        "Inventory",
+        back_populates="product",
+        cascade="all, delete-orphan",
+    )
+    movements = db.relationship(
+        "InventoryMovement",
+        back_populates="product",
+    )
+
+
+class Inventory(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "inventory"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "warehouse_id",
+            "location_id",
+            "product_id",
+            name="uq_inventory_row",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    warehouse_id = db.Column(db.Integer, db.ForeignKey("warehouses.id"), nullable=False)
+    location_id = db.Column(db.Integer, db.ForeignKey("warehouse_locations.id"), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)
+    quantity = db.Column(db.Float, default=0, nullable=False)
+
+    warehouse = db.relationship("Warehouse", back_populates="inventory_rows")
+    location = db.relationship("WarehouseLocation", back_populates="inventory_rows")
+    product = db.relationship("Product", back_populates="inventory_rows")
+
+
+class InventoryMovement(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "inventory_movements"
+
+    id = db.Column(db.Integer, primary_key=True)
+    warehouse_id = db.Column(db.Integer, db.ForeignKey("warehouses.id"), nullable=False)
+    location_id = db.Column(db.Integer, db.ForeignKey("warehouse_locations.id"), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)
+    movement_type = db.Column(db.String(50), nullable=False)
+    reference_type = db.Column(db.String(50))
+    reference_id = db.Column(db.Integer)
+    quantity_before = db.Column(db.Float, default=0, nullable=False)
+    quantity_change = db.Column(db.Float, nullable=False)
+    quantity_after = db.Column(db.Float, nullable=False)
+    performed_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    note = db.Column(db.String(255))
+
+    warehouse = db.relationship("Warehouse", back_populates="movements")
+    location = db.relationship("WarehouseLocation", back_populates="movements")
+    product = db.relationship("Product", back_populates="movements")
+    performer = db.relationship("User", foreign_keys=[performed_by])
+
+
 class User(db.Model, SerializerMixin, TimestampMixin):
     __tablename__ = "users"
 

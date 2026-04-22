@@ -1,5 +1,20 @@
 from .constants import ROLE_DELEGATION_ALLOWED_TARGETS
-from .models import AuditLog, Employee, Role, User, UserPermissionDelegation
+from .models import (
+    AuditLog,
+    BankAccount,
+    Category,
+    Customer,
+    Employee,
+    Inventory,
+    InventoryMovement,
+    Product,
+    Role,
+    Supplier,
+    User,
+    UserPermissionDelegation,
+    Warehouse,
+    WarehouseLocation,
+)
 
 
 def serialize_user_delegation(delegation: UserPermissionDelegation):
@@ -110,6 +125,142 @@ def serialize_employee(employee: Employee):
         "status": employee.status,
         "created_at": employee.created_at.isoformat() if employee.created_at else None,
         "updated_at": employee.updated_at.isoformat() if employee.updated_at else None,
+    }
+
+
+def serialize_category(category: Category):
+    return {
+        "id": category.id,
+        "category_name": category.category_name,
+        "description": category.description,
+        "created_at": category.created_at.isoformat() if category.created_at else None,
+        "updated_at": category.updated_at.isoformat() if category.updated_at else None,
+    }
+
+
+def serialize_supplier(supplier: Supplier):
+    return {
+        "id": supplier.id,
+        "supplier_code": supplier.supplier_code,
+        "supplier_name": supplier.supplier_name,
+        "email": supplier.email,
+        "phone": supplier.phone,
+        "address": supplier.address,
+        "status": supplier.status,
+        "created_at": supplier.created_at.isoformat() if supplier.created_at else None,
+        "updated_at": supplier.updated_at.isoformat() if supplier.updated_at else None,
+    }
+
+
+def serialize_customer(customer: Customer):
+    return {
+        "id": customer.id,
+        "customer_code": customer.customer_code,
+        "customer_name": customer.customer_name,
+        "email": customer.email,
+        "phone": customer.phone,
+        "address": customer.address,
+        "status": customer.status,
+        "created_at": customer.created_at.isoformat() if customer.created_at else None,
+        "updated_at": customer.updated_at.isoformat() if customer.updated_at else None,
+    }
+
+
+def serialize_bank_account(bank_account: BankAccount):
+    return {
+        "id": bank_account.id,
+        "bank_name": bank_account.bank_name,
+        "account_number": bank_account.account_number,
+        "account_holder": bank_account.account_holder,
+        "branch": bank_account.branch,
+        "status": bank_account.status,
+        "created_at": bank_account.created_at.isoformat() if bank_account.created_at else None,
+        "updated_at": bank_account.updated_at.isoformat() if bank_account.updated_at else None,
+    }
+
+
+def serialize_warehouse(warehouse: Warehouse):
+    return {
+        "id": warehouse.id,
+        "warehouse_code": warehouse.warehouse_code,
+        "warehouse_name": warehouse.warehouse_name,
+        "address": warehouse.address,
+        "status": warehouse.status,
+        "created_at": warehouse.created_at.isoformat() if warehouse.created_at else None,
+        "updated_at": warehouse.updated_at.isoformat() if warehouse.updated_at else None,
+    }
+
+
+def serialize_warehouse_location(location: WarehouseLocation):
+    return {
+        "id": location.id,
+        "warehouse_id": location.warehouse_id,
+        "warehouse_code": location.warehouse.warehouse_code if location.warehouse else None,
+        "warehouse_name": location.warehouse.warehouse_name if location.warehouse else None,
+        "location_code": location.location_code,
+        "location_name": location.location_name,
+        "status": location.status,
+        "created_at": location.created_at.isoformat() if location.created_at else None,
+        "updated_at": location.updated_at.isoformat() if location.updated_at else None,
+    }
+
+
+def serialize_product(product: Product):
+    return {
+        "id": product.id,
+        "product_code": product.product_code,
+        "product_name": product.product_name,
+        "category_id": product.category_id,
+        "category_name": product.category.category_name if product.category else None,
+        "quantity_total": product.quantity_total,
+        "min_stock": product.min_stock,
+        "status": product.status,
+        "description": product.description,
+        "is_below_min_stock": product.quantity_total <= product.min_stock,
+        "created_at": product.created_at.isoformat() if product.created_at else None,
+        "updated_at": product.updated_at.isoformat() if product.updated_at else None,
+    }
+
+
+def serialize_inventory_row(inventory: Inventory):
+    return {
+        "id": inventory.id,
+        "warehouse_id": inventory.warehouse_id,
+        "warehouse_code": inventory.warehouse.warehouse_code if inventory.warehouse else None,
+        "warehouse_name": inventory.warehouse.warehouse_name if inventory.warehouse else None,
+        "location_id": inventory.location_id,
+        "location_code": inventory.location.location_code if inventory.location else None,
+        "location_name": inventory.location.location_name if inventory.location else None,
+        "product_id": inventory.product_id,
+        "product_code": inventory.product.product_code if inventory.product else None,
+        "product_name": inventory.product.product_name if inventory.product else None,
+        "quantity": inventory.quantity,
+        "updated_at": inventory.updated_at.isoformat() if inventory.updated_at else None,
+        "created_at": inventory.created_at.isoformat() if inventory.created_at else None,
+    }
+
+
+def serialize_inventory_movement(movement: InventoryMovement):
+    return {
+        "id": movement.id,
+        "warehouse_id": movement.warehouse_id,
+        "warehouse_name": movement.warehouse.warehouse_name if movement.warehouse else None,
+        "location_id": movement.location_id,
+        "location_name": movement.location.location_name if movement.location else None,
+        "product_id": movement.product_id,
+        "product_code": movement.product.product_code if movement.product else None,
+        "product_name": movement.product.product_name if movement.product else None,
+        "movement_type": movement.movement_type,
+        "reference_type": movement.reference_type,
+        "reference_id": movement.reference_id,
+        "quantity_before": movement.quantity_before,
+        "quantity_change": movement.quantity_change,
+        "quantity_after": movement.quantity_after,
+        "performed_by": movement.performed_by,
+        "performer_name": movement.performer.full_name if movement.performer else None,
+        "note": movement.note,
+        "created_at": movement.created_at.isoformat() if movement.created_at else None,
+        "updated_at": movement.updated_at.isoformat() if movement.updated_at else None,
     }
 
 
