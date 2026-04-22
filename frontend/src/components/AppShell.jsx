@@ -1,8 +1,8 @@
 import {
+  HomeOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  ShopOutlined,
 } from '@ant-design/icons';
 import { Avatar, Button, Dropdown, Layout, Menu, Space, Typography } from 'antd';
 import { createElement, useMemo, useState } from 'react';
@@ -20,7 +20,21 @@ function AppShell() {
   const [collapsed, setCollapsed] = useState(false);
 
   const items = useMemo(
-    () => navigationItems.filter((item) => !item.permission || hasPermission(item.permission)),
+    () => navigationItems.filter((item) => {
+      if (!item.permission && !item.permissionAny) {
+        return true;
+      }
+
+      if (item.permission && hasPermission(item.permission)) {
+        return true;
+      }
+
+      if (item.permissionAny?.some((permission) => hasPermission(permission))) {
+        return true;
+      }
+
+      return false;
+    }),
     [hasPermission],
   );
 
@@ -49,7 +63,7 @@ function AppShell() {
       >
         <div className="sidebar-brand">
           <div className="sidebar-brand-badge" aria-label="Biểu tượng hệ thống kho">
-            <ShopOutlined />
+            <HomeOutlined />
           </div>
           {!collapsed ? (
             <Typography.Text className="sidebar-brand-text">
@@ -93,7 +107,7 @@ function AppShell() {
                     Hệ thống quản lý kho thông minh
                   </Typography.Title>
                   <Typography.Text type="secondary">
-                    Quản lý tài khoản, nhân sự và phân quyền trên cùng một không gian làm việc rõ ràng, dễ dùng.
+                    Quản lý tài khoản, nhân sự và danh mục nền trên cùng một không gian làm việc rõ ràng, dễ dùng.
                   </Typography.Text>
                 </div>
               </Space>

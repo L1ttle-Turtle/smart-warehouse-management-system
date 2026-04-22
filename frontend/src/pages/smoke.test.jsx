@@ -6,29 +6,93 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/ProtectedRoute';
 import AuditLogsPage from './AuditLogsPage';
+import CatalogsPage from './CatalogsPage';
 import DelegationPage from './DelegationPage';
 import EmployeesPage from './EmployeesPage';
+import InventoryPage from './InventoryPage';
 import LoginPage from './LoginPage';
 import ProfilePage from './ProfilePage';
+import ProductsPage from './ProductsPage';
 import RolesPage from './RolesPage';
 import UsersPage from './UsersPage';
 
-let authState = {
-  loading: false,
-  isAuthenticated: true,
-  user: {
-    id: 1,
-    full_name: 'Admin User',
-    role: 'admin',
-    must_change_password: false,
-    permissions: ['dashboard.view', 'audit_logs.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'],
-    delegated_permission_sources: [],
-  },
-  login: vi.fn(async () => ({ must_change_password: false })),
-  logout: vi.fn(),
-  updateProfile: vi.fn(),
-  hasPermission: (permission) => ['dashboard.view', 'audit_logs.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'].includes(permission),
-};
+const adminPermissions = [
+  'dashboard.view',
+  'audit_logs.view',
+  'roles.view',
+  'delegations.manage',
+  'users.view',
+  'users.manage',
+  'employees.view',
+  'employees.manage',
+  'inventory.view',
+  'products.view',
+  'products.manage',
+  'categories.view',
+  'categories.manage',
+  'suppliers.view',
+  'suppliers.manage',
+  'customers.view',
+  'customers.manage',
+  'bank_accounts.view',
+  'bank_accounts.manage',
+];
+
+const managerPermissions = [
+  'dashboard.view',
+  'audit_logs.view',
+  'delegations.manage',
+  'employees.view',
+  'employees.manage',
+  'inventory.view',
+  'products.view',
+  'products.manage',
+  'categories.view',
+  'categories.manage',
+  'suppliers.view',
+  'suppliers.manage',
+  'customers.view',
+  'customers.manage',
+];
+
+const accountantPermissions = [
+  'dashboard.view',
+  'customers.view',
+  'customers.manage',
+  'bank_accounts.view',
+  'bank_accounts.manage',
+];
+
+const staffPermissions = [
+  'dashboard.view',
+  'inventory.view',
+  'products.view',
+];
+
+function buildAuthState(overrides = {}) {
+  const permissions = overrides.permissions || adminPermissions;
+
+  return {
+    loading: false,
+    isAuthenticated: true,
+    user: {
+      id: 1,
+      full_name: 'Admin User',
+      role: 'admin',
+      must_change_password: false,
+      permissions,
+      delegated_permission_sources: [],
+      ...(overrides.user || {}),
+    },
+    login: vi.fn(async () => ({ must_change_password: false })),
+    logout: vi.fn(),
+    updateProfile: vi.fn(),
+    hasPermission: (permission) => permissions.includes(permission),
+    ...overrides,
+  };
+}
+
+let authState = buildAuthState();
 
 vi.mock('../api/client', () => ({
   default: {
@@ -42,9 +106,9 @@ vi.mock('../api/client', () => ({
                 role_name: 'admin',
                 description: 'Admin role',
                 user_count: 1,
-                base_permissions: ['dashboard.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'],
+                base_permissions: adminPermissions,
                 delegated_permissions: [],
-                effective_permissions: ['dashboard.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'],
+                effective_permissions: adminPermissions,
               },
             ],
           },
@@ -95,6 +159,173 @@ vi.mock('../api/client', () => ({
         });
       }
 
+      if (url === '/inventory') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                warehouse_id: 1,
+                warehouse_code: 'WH001',
+                warehouse_name: 'Kho Trung Tam',
+                location_id: 1,
+                location_code: 'A-01',
+                location_name: 'Ke A-01',
+                product_id: 1,
+                product_code: 'PRD001',
+                product_name: 'Máy quét mã vạch',
+                quantity: 24,
+                updated_at: '2026-04-22T10:00:00',
+              },
+              {
+                id: 2,
+                warehouse_id: 2,
+                warehouse_code: 'WH002',
+                warehouse_name: 'Kho Miền Nam',
+                location_id: 4,
+                location_code: 'A-01',
+                location_name: 'Dãy A-01',
+                product_id: 1,
+                product_code: 'PRD001',
+                product_name: 'Máy quét mã vạch',
+                quantity: 8,
+                updated_at: '2026-04-22T10:15:00',
+              },
+            ],
+          },
+        });
+      }
+
+      if (url === '/inventory/movements') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                warehouse_id: 1,
+                warehouse_name: 'Kho Trung Tam',
+                location_id: 1,
+                location_name: 'Ke A-01',
+                product_id: 1,
+                product_code: 'PRD001',
+                product_name: 'Máy quét mã vạch',
+                movement_type: 'adjustment',
+                reference_type: 'seed',
+                quantity_before: 0,
+                quantity_change: 24,
+                quantity_after: 24,
+                performer_name: 'Manager User',
+                created_at: '2026-04-22T09:00:00',
+              },
+            ],
+          },
+        });
+      }
+
+      if (url === '/categories') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                category_name: 'Điện tử',
+                description: 'Thiết bị điện tử',
+                updated_at: '2026-04-20T08:00:00',
+              },
+            ],
+            total: 1,
+            page: 1,
+            page_size: 10,
+          },
+        });
+      }
+
+      if (url === '/products') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                product_code: 'PRD001',
+                product_name: 'Máy quét mã vạch',
+                category_id: 1,
+                category_name: 'Điện tử',
+                quantity_total: 24,
+                min_stock: 5,
+                status: 'active',
+                description: 'Thiết bị quét mã phục vụ kiểm kê',
+                is_below_min_stock: false,
+              },
+            ],
+            total: 1,
+            page: 1,
+            page_size: 10,
+          },
+        });
+      }
+
+      if (url === '/suppliers') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                supplier_code: 'SUP001',
+                supplier_name: 'Công ty Sao Mai',
+                email: 'saomai@example.com',
+                phone: '0909000001',
+                address: 'Quận 1, TP.HCM',
+                status: 'active',
+              },
+            ],
+            total: 1,
+            page: 1,
+            page_size: 10,
+          },
+        });
+      }
+
+      if (url === '/customers') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                customer_code: 'CUS001',
+                customer_name: 'Công ty Bình Minh',
+                email: 'binhminh@example.com',
+                phone: '0909000002',
+                address: 'Quận 7, TP.HCM',
+                status: 'active',
+              },
+            ],
+            total: 1,
+            page: 1,
+            page_size: 10,
+          },
+        });
+      }
+
+      if (url === '/bank-accounts') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                bank_name: 'Vietcombank',
+                account_number: '0123456789',
+                account_holder: 'Công ty ABC',
+                branch: 'Chi nhánh Quận 1',
+                status: 'active',
+              },
+            ],
+            total: 1,
+            page: 1,
+            page_size: 10,
+          },
+        });
+      }
+
       if (url === '/delegations/meta') {
         return Promise.resolve({
           data: {
@@ -102,7 +333,7 @@ vi.mock('../api/client', () => ({
               user_id: 1,
               full_name: 'Admin User',
               role_name: 'admin',
-              permissions: ['dashboard.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'],
+              permissions: adminPermissions,
             },
             target_roles: [
               { id: 2, role_name: 'manager', description: 'Manager role' },
@@ -200,9 +431,9 @@ vi.mock('../api/client', () => ({
               status: 'active',
             },
             permission_summary: {
-              total_permissions: 7,
+              total_permissions: adminPermissions.length,
               delegated_permissions: 0,
-              role_permissions: 7,
+              role_permissions: adminPermissions.length,
             },
             delegation_summary: {
               active_received: 0,
@@ -223,9 +454,10 @@ vi.mock('../api/client', () => ({
         });
       }
 
-      return Promise.resolve({ data: { items: [] } });
+      return Promise.resolve({ data: { items: [], total: 0, page: 1, page_size: 10 } });
     }),
     post: vi.fn(() => Promise.resolve({ data: { item: { id: 1 } } })),
+    put: vi.fn(() => Promise.resolve({ data: { item: { id: 1 } } })),
     patch: vi.fn(() => Promise.resolve({
       data: {
         user: {
@@ -236,7 +468,7 @@ vi.mock('../api/client', () => ({
           phone: '090000001',
           role: 'admin',
           must_change_password: false,
-          permissions: ['dashboard.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'],
+          permissions: adminPermissions,
           delegated_permission_sources: [],
         },
       },
@@ -260,22 +492,7 @@ function renderWithProviders(node, route = '/') {
 }
 
 beforeEach(() => {
-  authState = {
-    loading: false,
-    isAuthenticated: true,
-    user: {
-      id: 1,
-      full_name: 'Admin User',
-      role: 'admin',
-      must_change_password: false,
-      permissions: ['dashboard.view', 'audit_logs.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'],
-      delegated_permission_sources: [],
-    },
-    login: vi.fn(async () => ({ must_change_password: false })),
-    logout: vi.fn(),
-    updateProfile: vi.fn(),
-    hasPermission: (permission) => ['dashboard.view', 'audit_logs.view', 'roles.view', 'delegations.manage', 'users.view', 'users.manage', 'employees.view', 'employees.manage'].includes(permission),
-  };
+  authState = buildAuthState();
 });
 
 test('renders login page', () => {
@@ -284,19 +501,14 @@ test('renders login page', () => {
 });
 
 test('filters navigation items by permission', () => {
-  authState = {
-    ...authState,
+  authState = buildAuthState({
+    permissions: managerPermissions,
     user: {
       id: 2,
       full_name: 'Manager User',
       role: 'manager',
-      must_change_password: false,
-      permissions: ['dashboard.view', 'audit_logs.view', 'delegations.manage', 'employees.view', 'employees.manage'],
-      delegated_permission_sources: [],
     },
-    updateProfile: vi.fn(),
-    hasPermission: (permission) => ['dashboard.view', 'audit_logs.view', 'delegations.manage', 'employees.view', 'employees.manage'].includes(permission),
-  };
+  });
 
   renderWithProviders(
     <Routes>
@@ -308,8 +520,9 @@ test('filters navigation items by permission', () => {
 
   expect(screen.getByText(/Dashboard cá nhân/i)).toBeInTheDocument();
   expect(screen.getAllByText(/Nhân sự/i).length).toBeGreaterThan(0);
-  expect(screen.getByText(/Ủy quyền quyền hạn/i)).toBeInTheDocument();
-  expect(screen.getByText(/Audit log/i)).toBeInTheDocument();
+  expect(screen.getByText(/^Danh mục nền$/i)).toBeInTheDocument();
+  expect(screen.getByText(/^Ủy quyền quyền hạn$/i)).toBeInTheDocument();
+  expect(screen.getByText(/^Audit log$/i)).toBeInTheDocument();
   expect(screen.queryByText(/^Tài khoản$/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/^Vai trò và quyền$/i)).not.toBeInTheDocument();
 });
@@ -324,13 +537,57 @@ test('renders role matrix page', async () => {
 test('renders users page', async () => {
   renderWithProviders(<UsersPage />, '/users');
   await waitFor(() => expect(screen.getAllByText(/Tài khoản người dùng/i).length).toBeGreaterThan(0));
-  expect(screen.getAllByText(/Admin User/i).length).toBeGreaterThan(0);
+  await waitFor(() => expect(screen.getAllByText(/Admin User/i).length).toBeGreaterThan(0));
 });
 
 test('renders employees page', async () => {
   renderWithProviders(<EmployeesPage />, '/employees');
   await waitFor(() => expect(screen.getAllByText(/Nhân sự/i).length).toBeGreaterThan(0));
   await waitFor(() => expect(screen.getByText(/EMP001/i)).toBeInTheDocument());
+});
+
+test('renders catalogs page for admin with all tabs', async () => {
+  renderWithProviders(<CatalogsPage />, '/catalogs?tab=categories');
+
+  await waitFor(() => expect(screen.getAllByText(/Danh mục nền/i).length).toBeGreaterThan(0));
+  expect(screen.getByRole('tab', { name: /Nhóm hàng/i })).toBeInTheDocument();
+  expect(screen.getByRole('tab', { name: /Nhà cung cấp/i })).toBeInTheDocument();
+  expect(screen.getByRole('tab', { name: /Khách hàng/i })).toBeInTheDocument();
+  expect(screen.getByRole('tab', { name: /Tài khoản ngân hàng/i })).toBeInTheDocument();
+});
+
+test('accountant only sees customer and bank account tabs', async () => {
+  authState = buildAuthState({
+    permissions: accountantPermissions,
+    user: {
+      id: 4,
+      full_name: 'Accountant User',
+      role: 'accountant',
+    },
+  });
+
+  renderWithProviders(<CatalogsPage />, '/catalogs?tab=customers');
+
+  await waitFor(() => expect(screen.getByRole('tab', { name: /Khách hàng/i })).toBeInTheDocument());
+  expect(screen.getByRole('tab', { name: /Tài khoản ngân hàng/i })).toBeInTheDocument();
+  expect(screen.queryByRole('tab', { name: /Nhóm hàng/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('tab', { name: /Nhà cung cấp/i })).not.toBeInTheDocument();
+});
+
+test('catalogs page redirects accountant to first allowed tab for invalid query tab', async () => {
+  authState = buildAuthState({
+    permissions: accountantPermissions,
+    user: {
+      id: 4,
+      full_name: 'Accountant User',
+      role: 'accountant',
+    },
+  });
+
+  renderWithProviders(<CatalogsPage />, '/catalogs?tab=categories');
+
+  await waitFor(() => expect(screen.getByRole('tab', { name: /Khách hàng/i })).toBeInTheDocument());
+  expect(screen.queryByRole('tab', { name: /Nhóm hàng/i })).not.toBeInTheDocument();
 });
 
 test('renders delegation page', async () => {
@@ -354,11 +611,53 @@ test('renders audit logs page', async () => {
   await waitFor(() => expect(screen.getAllByText(/users.created/i).length).toBeGreaterThan(0));
 });
 
+test('renders products page', async () => {
+  renderWithProviders(<ProductsPage />, '/products');
+  await waitFor(() => expect(screen.getAllByText(/Sản phẩm/i).length).toBeGreaterThan(0));
+  await waitFor(() => expect(screen.getAllByText(/PRD001/i).length).toBeGreaterThan(0));
+});
+
+test('staff can render products page but not management actions', async () => {
+  authState = buildAuthState({
+    permissions: staffPermissions,
+    user: {
+      id: 3,
+      full_name: 'Staff User',
+      role: 'staff',
+    },
+  });
+
+  renderWithProviders(<ProductsPage />, '/products');
+
+  await waitFor(() => expect(screen.getAllByText(/PRD001/i).length).toBeGreaterThan(0));
+  expect(screen.queryByRole('button', { name: /Thêm sản phẩm/i })).not.toBeInTheDocument();
+});
+
+test('renders inventory page', async () => {
+  renderWithProviders(<InventoryPage />, '/inventory');
+  await waitFor(() => expect(screen.getAllByText(/Tồn kho/i).length).toBeGreaterThan(0));
+  await waitFor(() => expect(screen.getAllByText(/Kho Trung Tam/i).length).toBeGreaterThan(0));
+  expect(screen.getByRole('tab', { name: /Tồn hiện tại/i })).toBeInTheDocument();
+  expect(screen.getByRole('tab', { name: /Lịch sử biến động/i })).toBeInTheDocument();
+});
+
+test('staff can render inventory page', async () => {
+  authState = buildAuthState({
+    permissions: staffPermissions,
+    user: {
+      id: 3,
+      full_name: 'Staff User',
+      role: 'staff',
+    },
+  });
+
+  renderWithProviders(<InventoryPage />, '/inventory');
+
+  await waitFor(() => expect(screen.getAllByText(/Kho Trung Tam/i).length).toBeGreaterThan(0));
+});
+
 test('redirects unauthenticated users to login', async () => {
-  authState = {
-    ...authState,
-    isAuthenticated: false,
-  };
+  authState = buildAuthState({ isAuthenticated: false });
 
   renderWithProviders(
     <Routes>
@@ -379,19 +678,14 @@ test('redirects unauthenticated users to login', async () => {
 });
 
 test('redirects unauthorized users to forbidden page', async () => {
-  authState = {
-    ...authState,
+  authState = buildAuthState({
+    permissions: ['dashboard.view'],
     user: {
       id: 3,
       full_name: 'Staff User',
       role: 'staff',
-      must_change_password: false,
-      permissions: ['dashboard.view'],
-      delegated_permission_sources: [],
     },
-    updateProfile: vi.fn(),
-    hasPermission: (permission) => permission === 'dashboard.view',
-  };
+  });
 
   renderWithProviders(
     <Routes>

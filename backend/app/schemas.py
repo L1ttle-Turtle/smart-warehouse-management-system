@@ -100,3 +100,79 @@ class EmployeeUpdateSchema(Schema):
     phone = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=20))
     email = fields.Email(load_default=None, allow_none=True)
     status = fields.String(load_default=None, validate=validate.OneOf(["active", "inactive"]))
+
+
+class CategorySchema(Schema):
+    category_name = fields.String(required=True, validate=validate.Length(min=2, max=120))
+    description = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+
+
+class SupplierSchema(Schema):
+    supplier_code = fields.String(required=True, validate=validate.Length(min=2, max=30))
+    supplier_name = fields.String(required=True, validate=validate.Length(min=2, max=120))
+    email = fields.Email(load_default=None, allow_none=True)
+    phone = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=20))
+    address = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+    status = fields.String(load_default="active", validate=validate.OneOf(["active", "inactive"]))
+
+
+class CustomerSchema(Schema):
+    customer_code = fields.String(required=True, validate=validate.Length(min=2, max=30))
+    customer_name = fields.String(required=True, validate=validate.Length(min=2, max=120))
+    email = fields.Email(load_default=None, allow_none=True)
+    phone = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=20))
+    address = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+    status = fields.String(load_default="active", validate=validate.OneOf(["active", "inactive"]))
+
+
+class BankAccountSchema(Schema):
+    bank_name = fields.String(required=True, validate=validate.Length(min=2, max=120))
+    account_number = fields.String(required=True, validate=validate.Length(min=4, max=50))
+    account_holder = fields.String(required=True, validate=validate.Length(min=2, max=120))
+    branch = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=120))
+    status = fields.String(load_default="active", validate=validate.OneOf(["active", "inactive"]))
+
+
+class WarehouseSchema(Schema):
+    warehouse_code = fields.String(required=True, validate=validate.Length(min=2, max=30))
+    warehouse_name = fields.String(required=True, validate=validate.Length(min=2, max=120))
+    address = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+    status = fields.String(load_default="active", validate=validate.OneOf(["active", "inactive"]))
+
+
+class WarehouseLocationSchema(Schema):
+    warehouse_id = fields.Integer(required=True)
+    location_code = fields.String(required=True, validate=validate.Length(min=1, max=30))
+    location_name = fields.String(required=True, validate=validate.Length(min=2, max=120))
+    status = fields.String(load_default="active", validate=validate.OneOf(["active", "inactive"]))
+
+
+class ProductSchema(Schema):
+    product_code = fields.String(required=True, validate=validate.Length(min=2, max=30))
+    product_name = fields.String(required=True, validate=validate.Length(min=2, max=120))
+    category_id = fields.Integer(required=True)
+    quantity_total = fields.Float(load_default=0, validate=validate.Range(min=0))
+    min_stock = fields.Float(load_default=0, validate=validate.Range(min=0))
+    status = fields.String(load_default="active", validate=validate.OneOf(["active", "inactive"]))
+    description = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+
+
+class InventorySchema(Schema):
+    warehouse_id = fields.Integer(required=True)
+    location_id = fields.Integer(required=True)
+    product_id = fields.Integer(required=True)
+    quantity = fields.Float(required=True, validate=validate.Range(min=0))
+
+
+class InventoryMovementSchema(Schema):
+    warehouse_id = fields.Integer(required=True)
+    location_id = fields.Integer(required=True)
+    product_id = fields.Integer(required=True)
+    movement_type = fields.String(required=True, validate=validate.Length(min=2, max=50))
+    reference_type = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=50))
+    reference_id = fields.Integer(load_default=None, allow_none=True)
+    quantity_before = fields.Float(required=True)
+    quantity_change = fields.Float(required=True)
+    quantity_after = fields.Float(required=True)
+    performed_by = fields.Integer(load_default=None, allow_none=True)
+    note = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))

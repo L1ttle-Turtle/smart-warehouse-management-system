@@ -3,7 +3,11 @@ import { Spin } from 'antd';
 
 import { useAuth } from '../auth/useAuth';
 
-function ProtectedRoute({ children, requiredPermission = null }) {
+function ProtectedRoute({
+  children,
+  requiredPermission = null,
+  requiredPermissionsAny = null,
+}) {
   const location = useLocation();
   const { loading, isAuthenticated, hasPermission, user } = useAuth();
 
@@ -30,6 +34,14 @@ function ProtectedRoute({ children, requiredPermission = null }) {
   }
 
   if (requiredPermission && !hasPermission(requiredPermission)) {
+    return <Navigate to="/forbidden" replace />;
+  }
+
+  if (
+    Array.isArray(requiredPermissionsAny)
+    && requiredPermissionsAny.length
+    && !requiredPermissionsAny.some((permission) => hasPermission(permission))
+  ) {
     return <Navigate to="/forbidden" replace />;
   }
 

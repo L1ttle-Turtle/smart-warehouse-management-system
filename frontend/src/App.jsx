@@ -6,13 +6,16 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AppShell from './components/AppShell';
 import { useAuth } from './auth/useAuth';
 
+const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage'));
+const CatalogsPage = lazy(() => import('./pages/CatalogsPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const DelegationPage = lazy(() => import('./pages/DelegationPage'));
 const EmployeesPage = lazy(() => import('./pages/EmployeesPage'));
-const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage'));
 const ForbiddenPage = lazy(() => import('./pages/ForbiddenPage'));
+const InventoryPage = lazy(() => import('./pages/InventoryPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const ProductsPage = lazy(() => import('./pages/ProductsPage'));
 const RolesPage = lazy(() => import('./pages/RolesPage'));
 const UsersPage = lazy(() => import('./pages/UsersPage'));
 
@@ -75,6 +78,37 @@ function App() {
               </ProtectedRoute>
             )}
           />
+          <Route
+            path="catalogs"
+            element={(
+              <ProtectedRoute
+                requiredPermissionsAny={[
+                  'categories.view',
+                  'suppliers.view',
+                  'customers.view',
+                  'bank_accounts.view',
+                ]}
+              >
+                <CatalogsPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="products"
+            element={(
+              <ProtectedRoute requiredPermission="products.view">
+                <ProductsPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="inventory"
+            element={(
+              <ProtectedRoute requiredPermission="inventory.view">
+                <InventoryPage />
+              </ProtectedRoute>
+            )}
+          />
           <Route path="profile" element={<ProfilePage />} />
           <Route
             path="delegations"
@@ -93,7 +127,7 @@ function App() {
             )}
           />
         </Route>
-        <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />
+        <Route path="*" element={<Navigate to={isAuthenticated ? '/' : '/login'} replace />} />
       </Routes>
     </Suspense>
   );
