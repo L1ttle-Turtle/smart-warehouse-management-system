@@ -339,6 +339,125 @@ class InventoryMovement(db.Model, SerializerMixin, TimestampMixin):
     performer = db.relationship("User", foreign_keys=[performed_by])
 
 
+class ImportReceipt(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "import_receipts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    receipt_code = db.Column(db.String(30), unique=True, nullable=False)
+    warehouse_id = db.Column(db.Integer, db.ForeignKey("warehouses.id"), nullable=False)
+    supplier_id = db.Column(db.Integer, db.ForeignKey("suppliers.id"))
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    confirmed_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    status = db.Column(db.String(20), default="draft", nullable=False)
+    note = db.Column(db.String(255))
+    confirmed_at = db.Column(db.DateTime)
+
+    warehouse = db.relationship("Warehouse", foreign_keys=[warehouse_id])
+    supplier = db.relationship("Supplier", foreign_keys=[supplier_id])
+    creator = db.relationship("User", foreign_keys=[created_by])
+    confirmer = db.relationship("User", foreign_keys=[confirmed_by])
+    details = db.relationship(
+        "ImportReceiptDetail",
+        back_populates="receipt",
+        cascade="all, delete-orphan",
+        order_by="ImportReceiptDetail.id",
+    )
+
+
+class ImportReceiptDetail(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "import_receipt_details"
+
+    id = db.Column(db.Integer, primary_key=True)
+    receipt_id = db.Column(db.Integer, db.ForeignKey("import_receipts.id"), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)
+    location_id = db.Column(db.Integer, db.ForeignKey("warehouse_locations.id"), nullable=False)
+    quantity = db.Column(db.Float, nullable=False)
+
+    receipt = db.relationship("ImportReceipt", back_populates="details")
+    product = db.relationship("Product", foreign_keys=[product_id])
+    location = db.relationship("WarehouseLocation", foreign_keys=[location_id])
+
+
+class ExportReceipt(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "export_receipts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    receipt_code = db.Column(db.String(30), unique=True, nullable=False)
+    warehouse_id = db.Column(db.Integer, db.ForeignKey("warehouses.id"), nullable=False)
+    customer_id = db.Column(db.Integer, db.ForeignKey("customers.id"))
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    confirmed_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    status = db.Column(db.String(20), default="draft", nullable=False)
+    note = db.Column(db.String(255))
+    confirmed_at = db.Column(db.DateTime)
+
+    warehouse = db.relationship("Warehouse", foreign_keys=[warehouse_id])
+    customer = db.relationship("Customer", foreign_keys=[customer_id])
+    creator = db.relationship("User", foreign_keys=[created_by])
+    confirmer = db.relationship("User", foreign_keys=[confirmed_by])
+    details = db.relationship(
+        "ExportReceiptDetail",
+        back_populates="receipt",
+        cascade="all, delete-orphan",
+        order_by="ExportReceiptDetail.id",
+    )
+
+
+class ExportReceiptDetail(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "export_receipt_details"
+
+    id = db.Column(db.Integer, primary_key=True)
+    receipt_id = db.Column(db.Integer, db.ForeignKey("export_receipts.id"), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)
+    location_id = db.Column(db.Integer, db.ForeignKey("warehouse_locations.id"), nullable=False)
+    quantity = db.Column(db.Float, nullable=False)
+
+    receipt = db.relationship("ExportReceipt", back_populates="details")
+    product = db.relationship("Product", foreign_keys=[product_id])
+    location = db.relationship("WarehouseLocation", foreign_keys=[location_id])
+
+
+class StockTransfer(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "stock_transfers"
+
+    id = db.Column(db.Integer, primary_key=True)
+    transfer_code = db.Column(db.String(30), unique=True, nullable=False)
+    source_warehouse_id = db.Column(db.Integer, db.ForeignKey("warehouses.id"), nullable=False)
+    target_warehouse_id = db.Column(db.Integer, db.ForeignKey("warehouses.id"), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    confirmed_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    status = db.Column(db.String(20), default="draft", nullable=False)
+    note = db.Column(db.String(255))
+    confirmed_at = db.Column(db.DateTime)
+
+    source_warehouse = db.relationship("Warehouse", foreign_keys=[source_warehouse_id])
+    target_warehouse = db.relationship("Warehouse", foreign_keys=[target_warehouse_id])
+    creator = db.relationship("User", foreign_keys=[created_by])
+    confirmer = db.relationship("User", foreign_keys=[confirmed_by])
+    details = db.relationship(
+        "StockTransferDetail",
+        back_populates="transfer",
+        cascade="all, delete-orphan",
+        order_by="StockTransferDetail.id",
+    )
+
+
+class StockTransferDetail(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "stock_transfer_details"
+
+    id = db.Column(db.Integer, primary_key=True)
+    transfer_id = db.Column(db.Integer, db.ForeignKey("stock_transfers.id"), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)
+    source_location_id = db.Column(db.Integer, db.ForeignKey("warehouse_locations.id"), nullable=False)
+    target_location_id = db.Column(db.Integer, db.ForeignKey("warehouse_locations.id"), nullable=False)
+    quantity = db.Column(db.Float, nullable=False)
+
+    transfer = db.relationship("StockTransfer", back_populates="details")
+    product = db.relationship("Product", foreign_keys=[product_id])
+    source_location = db.relationship("WarehouseLocation", foreign_keys=[source_location_id])
+    target_location = db.relationship("WarehouseLocation", foreign_keys=[target_location_id])
+
+
 class User(db.Model, SerializerMixin, TimestampMixin):
     __tablename__ = "users"
 

@@ -176,3 +176,55 @@ class InventoryMovementSchema(Schema):
     quantity_after = fields.Float(required=True)
     performed_by = fields.Integer(load_default=None, allow_none=True)
     note = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+
+
+class ImportReceiptItemSchema(Schema):
+    product_id = fields.Integer(required=True)
+    location_id = fields.Integer(required=True)
+    quantity = fields.Float(required=True, validate=validate.Range(min=0.0001))
+
+
+class ImportReceiptSchema(Schema):
+    warehouse_id = fields.Integer(required=True)
+    supplier_id = fields.Integer(load_default=None, allow_none=True)
+    note = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+    items = fields.List(
+        fields.Nested(ImportReceiptItemSchema),
+        required=True,
+        validate=validate.Length(min=1),
+    )
+
+
+class ExportReceiptItemSchema(Schema):
+    product_id = fields.Integer(required=True)
+    location_id = fields.Integer(required=True)
+    quantity = fields.Float(required=True, validate=validate.Range(min=0.0001))
+
+
+class ExportReceiptSchema(Schema):
+    warehouse_id = fields.Integer(required=True)
+    customer_id = fields.Integer(load_default=None, allow_none=True)
+    note = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+    items = fields.List(
+        fields.Nested(ExportReceiptItemSchema),
+        required=True,
+        validate=validate.Length(min=1),
+    )
+
+
+class StockTransferItemSchema(Schema):
+    product_id = fields.Integer(required=True)
+    source_location_id = fields.Integer(required=True)
+    target_location_id = fields.Integer(required=True)
+    quantity = fields.Float(required=True, validate=validate.Range(min=0.0001))
+
+
+class StockTransferSchema(Schema):
+    source_warehouse_id = fields.Integer(required=True)
+    target_warehouse_id = fields.Integer(required=True)
+    note = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+    items = fields.List(
+        fields.Nested(StockTransferItemSchema),
+        required=True,
+        validate=validate.Length(min=1),
+    )

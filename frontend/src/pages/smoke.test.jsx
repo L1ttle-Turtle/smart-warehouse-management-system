@@ -9,12 +9,16 @@ import AuditLogsPage from './AuditLogsPage';
 import CatalogsPage from './CatalogsPage';
 import DelegationPage from './DelegationPage';
 import EmployeesPage from './EmployeesPage';
+import ExportReceiptsPage from './ExportReceiptsPage';
+import ImportReceiptsPage from './ImportReceiptsPage';
 import InventoryPage from './InventoryPage';
 import LoginPage from './LoginPage';
 import ProfilePage from './ProfilePage';
 import ProductsPage from './ProductsPage';
 import RolesPage from './RolesPage';
+import StockTransfersPage from './StockTransfersPage';
 import UsersPage from './UsersPage';
+import WarehousesPage from './WarehousesPage';
 
 const adminPermissions = [
   'dashboard.view',
@@ -26,6 +30,16 @@ const adminPermissions = [
   'employees.view',
   'employees.manage',
   'inventory.view',
+  'export_receipts.view',
+  'export_receipts.manage',
+  'import_receipts.view',
+  'import_receipts.manage',
+  'stock_transfers.view',
+  'stock_transfers.manage',
+  'warehouses.view',
+  'warehouses.manage',
+  'locations.view',
+  'locations.manage',
   'products.view',
   'products.manage',
   'categories.view',
@@ -45,6 +59,16 @@ const managerPermissions = [
   'employees.view',
   'employees.manage',
   'inventory.view',
+  'export_receipts.view',
+  'export_receipts.manage',
+  'import_receipts.view',
+  'import_receipts.manage',
+  'stock_transfers.view',
+  'stock_transfers.manage',
+  'warehouses.view',
+  'warehouses.manage',
+  'locations.view',
+  'locations.manage',
   'products.view',
   'products.manage',
   'categories.view',
@@ -66,6 +90,14 @@ const accountantPermissions = [
 const staffPermissions = [
   'dashboard.view',
   'inventory.view',
+  'export_receipts.view',
+  'export_receipts.manage',
+  'import_receipts.view',
+  'import_receipts.manage',
+  'stock_transfers.view',
+  'stock_transfers.manage',
+  'warehouses.view',
+  'locations.view',
   'products.view',
 ];
 
@@ -192,6 +224,220 @@ vi.mock('../api/client', () => ({
                 updated_at: '2026-04-22T10:15:00',
               },
             ],
+          },
+        });
+      }
+
+      if (url === '/import-receipts') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                receipt_code: 'IMP-DEMO-001',
+                warehouse_id: 1,
+                warehouse_code: 'WH001',
+                warehouse_name: 'Kho Trung Tam',
+                supplier_id: 1,
+                supplier_code: 'SUP001',
+                supplier_name: 'Công ty Sao Mai',
+                created_by: 2,
+                created_by_name: 'Manager User',
+                confirmed_by: null,
+                confirmed_by_name: null,
+                status: 'draft',
+                note: 'Phiếu nhập demo tối thiểu',
+                detail_count: 2,
+                total_quantity: 25,
+                confirmed_at: null,
+                created_at: '2026-04-22T09:00:00',
+                updated_at: '2026-04-22T09:10:00',
+                details: [
+                  {
+                    id: 1,
+                    product_id: 1,
+                    product_code: 'PRD001',
+                    product_name: 'Máy quét mã vạch',
+                    location_id: 1,
+                    location_code: 'A-01',
+                    location_name: 'Kệ A-01',
+                    quantity: 5,
+                  },
+                  {
+                    id: 2,
+                    product_id: 1,
+                    product_code: 'PRD001',
+                    product_name: 'Máy quét mã vạch',
+                    location_id: 2,
+                    location_code: 'B-01',
+                    location_name: 'Kệ B-01',
+                    quantity: 20,
+                  },
+                ],
+              },
+            ],
+            total: 1,
+            page: 1,
+            page_size: 10,
+          },
+        });
+      }
+
+      if (url === '/export-receipts') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                receipt_code: 'EXP-DEMO-001',
+                warehouse_id: 1,
+                warehouse_code: 'WH001',
+                warehouse_name: 'Kho Trung Tam',
+                customer_id: 1,
+                customer_code: 'CUS001',
+                customer_name: 'Công ty Bình Minh',
+                created_by: 2,
+                created_by_name: 'Manager User',
+                confirmed_by: null,
+                confirmed_by_name: null,
+                status: 'draft',
+                note: 'Phiếu xuất demo tối thiểu',
+                detail_count: 2,
+                total_quantity: 17,
+                confirmed_at: null,
+                created_at: '2026-04-22T11:00:00',
+                updated_at: '2026-04-22T11:10:00',
+                details: [
+                  {
+                    id: 1,
+                    product_id: 1,
+                    product_code: 'PRD001',
+                    product_name: 'Máy quét mã vạch',
+                    location_id: 1,
+                    location_code: 'A-01',
+                    location_name: 'Kệ A-01',
+                    quantity: 2,
+                  },
+                  {
+                    id: 2,
+                    product_id: 3,
+                    product_code: 'PRD003',
+                    product_name: 'Tem dán mã vận',
+                    location_id: 2,
+                    location_code: 'C-01',
+                    location_name: 'Kệ C-01',
+                    quantity: 15,
+                  },
+                ],
+              },
+            ],
+            total: 1,
+            page: 1,
+            page_size: 10,
+          },
+        });
+      }
+
+      if (url === '/stock-transfers') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                transfer_code: 'TRF-DEMO-001',
+                source_warehouse_id: 1,
+                source_warehouse_code: 'WH001',
+                source_warehouse_name: 'Kho Trung Tam',
+                target_warehouse_id: 2,
+                target_warehouse_code: 'WH002',
+                target_warehouse_name: 'Kho Mien Nam',
+                created_by: 2,
+                created_by_name: 'Manager User',
+                confirmed_by: null,
+                confirmed_by_name: null,
+                status: 'draft',
+                note: 'Phiếu điều chuyển demo tối thiểu',
+                detail_count: 1,
+                total_quantity: 3,
+                confirmed_at: null,
+                created_at: '2026-04-22T12:00:00',
+                updated_at: '2026-04-22T12:10:00',
+                details: [
+                  {
+                    id: 1,
+                    product_id: 1,
+                    product_code: 'PRD001',
+                    product_name: 'Máy quét mã vạch',
+                    source_location_id: 1,
+                    source_location_code: 'A-01',
+                    source_location_name: 'Kệ A-01',
+                    target_location_id: 2,
+                    target_location_code: 'A-01',
+                    target_location_name: 'Dãy A-01',
+                    quantity: 3,
+                  },
+                ],
+              },
+            ],
+            total: 1,
+            page: 1,
+            page_size: 10,
+          },
+        });
+      }
+
+      if (url === '/warehouses') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                warehouse_code: 'WH001',
+                warehouse_name: 'Kho Trung Tâm',
+                address: '12 Nguyễn Trãi, Hà Nội',
+                status: 'active',
+              },
+              {
+                id: 2,
+                warehouse_code: 'WH002',
+                warehouse_name: 'Kho Miền Nam',
+                address: '215 Võ Văn Kiệt, TP.HCM',
+                status: 'active',
+              },
+            ],
+            total: 2,
+            page: 1,
+            page_size: 10,
+          },
+        });
+      }
+
+      if (url === '/locations') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                warehouse_id: 1,
+                warehouse_code: 'WH001',
+                warehouse_name: 'Kho Trung Tâm',
+                location_code: 'A-01',
+                location_name: 'Kệ A-01',
+                status: 'active',
+              },
+              {
+                id: 2,
+                warehouse_id: 2,
+                warehouse_code: 'WH002',
+                warehouse_name: 'Kho Miền Nam',
+                location_code: 'B-01',
+                location_name: 'Dãy B-01',
+                status: 'active',
+              },
+            ],
+            total: 2,
+            page: 1,
+            page_size: 10,
           },
         });
       }
@@ -520,6 +766,8 @@ test('filters navigation items by permission', () => {
 
   expect(screen.getByText(/Dashboard cá nhân/i)).toBeInTheDocument();
   expect(screen.getAllByText(/Nhân sự/i).length).toBeGreaterThan(0);
+  expect(screen.getByText(/^Nhập kho$/i)).toBeInTheDocument();
+  expect(screen.getByText(/^Xuất kho$/i)).toBeInTheDocument();
   expect(screen.getByText(/^Danh mục nền$/i)).toBeInTheDocument();
   expect(screen.getByText(/^Ủy quyền quyền hạn$/i)).toBeInTheDocument();
   expect(screen.getByText(/^Audit log$/i)).toBeInTheDocument();
@@ -639,6 +887,146 @@ test('renders inventory page', async () => {
   await waitFor(() => expect(screen.getAllByText(/Kho Trung Tam/i).length).toBeGreaterThan(0));
   expect(screen.getByRole('tab', { name: /Tồn hiện tại/i })).toBeInTheDocument();
   expect(screen.getByRole('tab', { name: /Lịch sử biến động/i })).toBeInTheDocument();
+});
+
+test('renders warehouses page with warehouse and location tabs', async () => {
+  renderWithProviders(<WarehousesPage />, '/warehouses?tab=warehouses');
+
+  await waitFor(() => expect(screen.getAllByText(/Quản lý kho bãi/i).length).toBeGreaterThan(0));
+  expect(screen.getAllByRole('tab')).toHaveLength(2);
+  expect(screen.getByText(/Vị trí kho/i)).toBeInTheDocument();
+  await waitFor(() => expect(screen.getAllByText(/WH001/i).length).toBeGreaterThan(0));
+});
+
+test('staff can render warehouses page but not management actions', async () => {
+  authState = buildAuthState({
+    permissions: staffPermissions,
+    user: {
+      id: 3,
+      full_name: 'Staff User',
+      role: 'staff',
+    },
+  });
+
+  renderWithProviders(<WarehousesPage />, '/warehouses?tab=locations');
+
+  await waitFor(() => expect(screen.getAllByText(/Kho Trung Tâm/i).length).toBeGreaterThan(0));
+  expect(screen.queryByRole('button', { name: /Thêm kho/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Thêm vị trí kho/i })).not.toBeInTheDocument();
+});
+
+/* Removed duplicate import-receipt smoke tests whose matchers were encoding-corrupted.
+  renderWithProviders(<ImportReceiptsPage />, '/import-receipts');
+
+  await waitFor(() => expect(screen.getAllByText(/Nháº­p kho/i).length).toBeGreaterThan(0));
+  await waitFor(() => expect(screen.getAllByText(/IMP-DEMO-001/i).length).toBeGreaterThan(0));
+  expect(screen.getByRole('button', { name: /ThÃªm phiáº¿u nháº­p nhÃ¡p/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /XÃ¡c nháº­n/i })).toBeInTheDocument();
+});
+
+Duplicate staff import-receipt smoke test removed.
+  authState = buildAuthState({
+    permissions: staffPermissions,
+    user: {
+      id: 3,
+      full_name: 'Staff User',
+      role: 'staff',
+    },
+  });
+
+  renderWithProviders(<ImportReceiptsPage />, '/import-receipts');
+
+  await waitFor(() => expect(screen.getAllByText(/IMP-DEMO-001/i).length).toBeGreaterThan(0));
+  expect(screen.getByRole('button', { name: /ThÃªm phiáº¿u nháº­p nhÃ¡p/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /XÃ¡c nháº­n/i })).toBeInTheDocument();
+});
+
+*/
+
+test('renders import receipts page with draft receipt data', async () => {
+  renderWithProviders(<ImportReceiptsPage />, '/import-receipts');
+
+  await waitFor(() => expect(screen.getByText(/Module 6/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getAllByText(/IMP-DEMO-001/i).length).toBeGreaterThan(0));
+  expect(screen.getByRole('button', { name: /plus Thêm phiếu nhập nháp/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Chỉnh sửa/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Xác nhận/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Hủy phiếu/i })).toBeInTheDocument();
+});
+
+test('staff can render import receipts page and see inbound actions', async () => {
+  authState = buildAuthState({
+    permissions: staffPermissions,
+    user: {
+      id: 3,
+      full_name: 'Staff User',
+      role: 'staff',
+    },
+  });
+
+  renderWithProviders(<ImportReceiptsPage />, '/import-receipts');
+
+  await waitFor(() => expect(screen.getAllByText(/IMP-DEMO-001/i).length).toBeGreaterThan(0));
+  expect(screen.getByRole('button', { name: /plus Thêm phiếu nhập nháp/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Chỉnh sửa/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Xác nhận/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Hủy phiếu/i })).toBeInTheDocument();
+});
+
+test('renders export receipts page with draft receipt data', async () => {
+  renderWithProviders(<ExportReceiptsPage />, '/export-receipts');
+
+  await waitFor(() => expect(screen.getByText(/Luồng xuất kho tối thiểu/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getAllByText(/EXP-DEMO-001/i).length).toBeGreaterThan(0));
+  expect(screen.getByRole('button', { name: /plus Thêm phiếu xuất nháp/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Chỉnh sửa/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Xác nhận/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Hủy phiếu/i })).toBeInTheDocument();
+});
+
+test('staff can render export receipts page and see outbound actions', async () => {
+  authState = buildAuthState({
+    permissions: staffPermissions,
+    user: {
+      id: 3,
+      full_name: 'Staff User',
+      role: 'staff',
+    },
+  });
+
+  renderWithProviders(<ExportReceiptsPage />, '/export-receipts');
+
+  await waitFor(() => expect(screen.getAllByText(/EXP-DEMO-001/i).length).toBeGreaterThan(0));
+  expect(screen.getByRole('button', { name: /plus Thêm phiếu xuất nháp/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Chỉnh sửa/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Xác nhận/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Hủy phiếu/i })).toBeInTheDocument();
+});
+
+test('renders stock transfers page with draft transfer data', async () => {
+  renderWithProviders(<StockTransfersPage />, '/stock-transfers');
+
+  await waitFor(() => expect(screen.getByText(/Luồng điều chuyển kho tối thiểu/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getAllByText(/TRF-DEMO-001/i).length).toBeGreaterThan(0));
+  expect(screen.getByRole('button', { name: /plus Thêm phiếu điều chuyển nháp/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Xác nhận/i })).toBeInTheDocument();
+});
+
+test('staff can render stock transfers page and see transfer actions', async () => {
+  authState = buildAuthState({
+    permissions: staffPermissions,
+    user: {
+      id: 3,
+      full_name: 'Staff User',
+      role: 'staff',
+    },
+  });
+
+  renderWithProviders(<StockTransfersPage />, '/stock-transfers');
+
+  await waitFor(() => expect(screen.getAllByText(/TRF-DEMO-001/i).length).toBeGreaterThan(0));
+  expect(screen.getByRole('button', { name: /plus Thêm phiếu điều chuyển nháp/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Xác nhận/i })).toBeInTheDocument();
 });
 
 test('staff can render inventory page', async () => {

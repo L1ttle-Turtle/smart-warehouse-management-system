@@ -7,11 +7,17 @@ from .models import (
     Category,
     Customer,
     Employee,
+    ExportReceipt,
+    ExportReceiptDetail,
     Inventory,
     InventoryMovement,
+    ImportReceipt,
+    ImportReceiptDetail,
     Permission,
     Product,
     Role,
+    StockTransfer,
+    StockTransferDetail,
     Supplier,
     User,
     Warehouse,
@@ -561,10 +567,144 @@ def seed_inventory_demo():
         )
 
 
+def seed_import_receipt_demo():
+    if ImportReceipt.query.filter_by(receipt_code="IMP-DEMO-001").first():
+        return
+
+    manager_user = User.query.filter_by(username="manager").first()
+    warehouse = Warehouse.query.filter_by(warehouse_code="WH001").first()
+    supplier = Supplier.query.filter_by(supplier_code="SUP001").first()
+    printer = Product.query.filter_by(product_code="PRD002").first()
+    paper = Product.query.filter_by(product_code="PRD007").first()
+    printer_location = WarehouseLocation.query.filter_by(
+        warehouse_id=warehouse.id if warehouse else None,
+        location_code="B-01",
+    ).first()
+    paper_location = WarehouseLocation.query.filter_by(
+        warehouse_id=warehouse.id if warehouse else None,
+        location_code="C-01",
+    ).first()
+
+    if not all([manager_user, warehouse, supplier, printer, paper, printer_location, paper_location]):
+        return
+
+    receipt = ImportReceipt(
+        receipt_code="IMP-DEMO-001",
+        warehouse_id=warehouse.id,
+        supplier_id=supplier.id,
+        created_by=manager_user.id,
+        status="draft",
+        note="Phieu nhap nhap de demo buoc xac nhan tang ton kho.",
+    )
+    receipt.details.append(
+        ImportReceiptDetail(
+            product_id=printer.id,
+            location_id=printer_location.id,
+            quantity=5,
+        )
+    )
+    receipt.details.append(
+        ImportReceiptDetail(
+            product_id=paper.id,
+            location_id=paper_location.id,
+            quantity=20,
+        )
+    )
+    db.session.add(receipt)
+
+
+def seed_export_receipt_demo():
+    if ExportReceipt.query.filter_by(receipt_code="EXP-DEMO-001").first():
+        return
+
+    manager_user = User.query.filter_by(username="manager").first()
+    warehouse = Warehouse.query.filter_by(warehouse_code="WH001").first()
+    customer = Customer.query.filter_by(customer_code="CUS001").first()
+    scanner = Product.query.filter_by(product_code="PRD001").first()
+    labels = Product.query.filter_by(product_code="PRD003").first()
+    scanner_location = WarehouseLocation.query.filter_by(
+        warehouse_id=warehouse.id if warehouse else None,
+        location_code="A-01",
+    ).first()
+    label_location = WarehouseLocation.query.filter_by(
+        warehouse_id=warehouse.id if warehouse else None,
+        location_code="C-01",
+    ).first()
+
+    if not all([manager_user, warehouse, customer, scanner, labels, scanner_location, label_location]):
+        return
+
+    receipt = ExportReceipt(
+        receipt_code="EXP-DEMO-001",
+        warehouse_id=warehouse.id,
+        customer_id=customer.id,
+        created_by=manager_user.id,
+        status="draft",
+        note="Phieu xuat nhap de demo buoc xac nhan tru ton kho.",
+    )
+    receipt.details.append(
+        ExportReceiptDetail(
+            product_id=scanner.id,
+            location_id=scanner_location.id,
+            quantity=2,
+        )
+    )
+    receipt.details.append(
+        ExportReceiptDetail(
+            product_id=labels.id,
+            location_id=label_location.id,
+            quantity=15,
+        )
+    )
+    db.session.add(receipt)
+
+
+def seed_stock_transfer_demo():
+    if StockTransfer.query.filter_by(transfer_code="TRF-DEMO-001").first():
+        return
+
+    manager_user = User.query.filter_by(username="manager").first()
+    source_warehouse = Warehouse.query.filter_by(warehouse_code="WH001").first()
+    target_warehouse = Warehouse.query.filter_by(warehouse_code="WH002").first()
+    scanner = Product.query.filter_by(product_code="PRD001").first()
+    source_location = WarehouseLocation.query.filter_by(
+        warehouse_id=source_warehouse.id if source_warehouse else None,
+        location_code="A-01",
+    ).first()
+    target_location = WarehouseLocation.query.filter_by(
+        warehouse_id=target_warehouse.id if target_warehouse else None,
+        location_code="A-01",
+    ).first()
+
+    if not all([manager_user, source_warehouse, target_warehouse, scanner, source_location, target_location]):
+        return
+
+    transfer = StockTransfer(
+        transfer_code="TRF-DEMO-001",
+        source_warehouse_id=source_warehouse.id,
+        target_warehouse_id=target_warehouse.id,
+        created_by=manager_user.id,
+        status="draft",
+        note="Phieu dieu chuyen nhap de demo giam kho nguon va tang kho dich.",
+    )
+    transfer.details.append(
+        StockTransferDetail(
+            product_id=scanner.id,
+            source_location_id=source_location.id,
+            target_location_id=target_location.id,
+            quantity=3,
+        )
+    )
+    db.session.add(transfer)
+
+
 def seed_all():
     seed_roles_and_permissions()
     seed_default_users()
     seed_default_employees()
     seed_catalogs()
     seed_inventory_demo()
+    seed_import_receipt_demo()
+    seed_export_receipt_demo()
+    seed_stock_transfer_demo()
     db.session.commit()

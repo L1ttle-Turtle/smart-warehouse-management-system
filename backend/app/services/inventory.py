@@ -2,18 +2,21 @@ from __future__ import annotations
 
 from ..extensions import db
 from ..models import (
+    ExportReceipt,
+    ImportReceipt,
     Inventory,
     InventoryMovement,
-    Invoice,
     Product,
+    StockTransfer,
     WarehouseLocation,
 )
+from ..utils import utc_now
 
 
 def validate_location_in_warehouse(location_id, warehouse_id):
     location = db.session.get(WarehouseLocation, location_id)
     if not location or location.warehouse_id != warehouse_id:
-        raise ValueError("Location does not belong to the selected warehouse.")
+        raise ValueError("Vị trí kho không thuộc kho đã chọn.")
     return location
 
 
@@ -63,7 +66,7 @@ def adjust_inventory(
     quantity_before = float(record.quantity)
     quantity_after = quantity_before + float(delta)
     if quantity_after < 0:
-        raise ValueError("Insufficient stock for this operation.")
+        raise ValueError("Tồn kho không đủ cho thao tác này.")
 
     record.quantity = quantity_after
     movement = InventoryMovement(
@@ -84,9 +87,11 @@ def adjust_inventory(
     return movement
 
 
-def confirm_import_receipt(receipt, actor_id):
+def confirm_import_receipt(receipt: ImportReceipt, actor_id):
     if receipt.status != "draft":
-        raise ValueError("Only draft import receipts can be confirmed.")
+        raise ValueError("Chỉ phiếu nhập ở trạng thái nháp mới có thể xác nhận.")
+    if not receipt.details:
+        raise ValueError("Phiếu nhập phải có ít nhất một dòng hàng trước khi xác nhận.")
 
     for detail in receipt.details:
         adjust_inventory(
@@ -100,12 +105,17 @@ def confirm_import_receipt(receipt, actor_id):
             actor_id=actor_id,
             note=receipt.note or "",
         )
+
     receipt.status = "confirmed"
+    receipt.confirmed_by = actor_id
+    receipt.confirmed_at = utc_now()
 
 
-def confirm_export_receipt(receipt, actor_id):
+def confirm_export_receipt(receipt: ExportReceipt, actor_id):
     if receipt.status != "draft":
-        raise ValueError("Only draft export receipts can be confirmed.")
+        raise ValueError("Chỉ phiếu xuất ở trạng thái nháp mới có thể xác nhận.")
+    if not receipt.details:
+        raise ValueError("Phiếu xuất phải có ít nhất một dòng hàng trước khi xác nhận.")
 
     for detail in receipt.details:
         adjust_inventory(
@@ -119,12 +129,19 @@ def confirm_export_receipt(receipt, actor_id):
             actor_id=actor_id,
             note=receipt.note or "",
         )
+
     receipt.status = "confirmed"
+    receipt.confirmed_by = actor_id
+    receipt.confirmed_at = utc_now()
 
 
-def confirm_stock_transfer(transfer, actor_id):
+def confirm_stock_transfer(transfer: StockTransfer, actor_id):
     if transfer.status != "draft":
-        raise ValueError("Only draft transfers can be confirmed.")
+        raise ValueError("Chỉ phiếu điều chuyển ở trạng thái nháp mới có thể xác nhận.")
+    if not transfer.details:
+        raise ValueError("Phiếu điều chuyển phải có ít nhất một dòng hàng trước khi xác nhận.")
+    if transfer.source_warehouse_id == transfer.target_warehouse_id:
+        raise ValueError("Kho nguồn và kho đích phải khác nhau.")
 
     for detail in transfer.details:
         adjust_inventory(
@@ -139,8 +156,8 @@ def confirm_stock_transfer(transfer, actor_id):
             note=transfer.note or "",
         )
         adjust_inventory(
-            warehouse_id=transfer.destination_warehouse_id,
-            location_id=detail.destination_location_id,
+            warehouse_id=transfer.target_warehouse_id,
+            location_id=detail.target_location_id,
             product_id=detail.product_id,
             delta=detail.quantity,
             movement_type="transfer_in",
@@ -149,19 +166,7 @@ def confirm_stock_transfer(transfer, actor_id):
             actor_id=actor_id,
             note=transfer.note or "",
         )
+
     transfer.status = "confirmed"
-
-
-def refresh_invoice_payment_status(invoice: Invoice):
-    paid_amount = sum(payment.amount for payment in invoice.payments)
-    if paid_amount <= 0:
-        invoice.payment_status = "unpaid"
-    elif paid_amount < invoice.final_amount:
-        invoice.payment_status = "partial"
-    else:
-        invoice.payment_status = "paid"
-    return invoice.payment_status
-
-
-def get_low_stock_products():
-    return Product.query.filter(Product.quantity_total <= Product.min_stock).all()
+    transfer.confirmed_by = actor_id
+    transfer.confirmed_at = utc_now()

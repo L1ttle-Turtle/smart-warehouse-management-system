@@ -2,11 +2,14 @@ import {
   AppstoreOutlined,
   DashboardOutlined,
   DatabaseOutlined,
+  DownloadOutlined,
   FileSearchOutlined,
+  HomeOutlined,
   InboxOutlined,
   SafetyCertificateOutlined,
   SwapOutlined,
   TeamOutlined,
+  UploadOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 
@@ -15,6 +18,33 @@ export const navigationItems = [
   { key: '/users', label: 'Tài khoản', icon: UserOutlined, permission: 'users.view' },
   { key: '/employees', label: 'Nhân sự', icon: TeamOutlined, permission: 'employees.view' },
   { key: '/products', label: 'Sản phẩm', icon: InboxOutlined, permission: 'products.view' },
+  {
+    key: '/warehouses',
+    label: 'Kho bãi',
+    icon: HomeOutlined,
+    permissionAny: [
+      'warehouses.view',
+      'locations.view',
+    ],
+  },
+  {
+    key: '/import-receipts',
+    label: 'Nhập kho',
+    icon: DownloadOutlined,
+    permission: 'import_receipts.view',
+  },
+  {
+    key: '/export-receipts',
+    label: 'Xuất kho',
+    icon: UploadOutlined,
+    permission: 'export_receipts.view',
+  },
+  {
+    key: '/stock-transfers',
+    label: 'Điều chuyển kho',
+    icon: SwapOutlined,
+    permission: 'stock_transfers.view',
+  },
   { key: '/inventory', label: 'Tồn kho', icon: DatabaseOutlined, permission: 'inventory.view' },
   {
     key: '/catalogs',

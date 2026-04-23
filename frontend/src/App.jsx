@@ -11,13 +11,17 @@ const CatalogsPage = lazy(() => import('./pages/CatalogsPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const DelegationPage = lazy(() => import('./pages/DelegationPage'));
 const EmployeesPage = lazy(() => import('./pages/EmployeesPage'));
+const ExportReceiptsPage = lazy(() => import('./pages/ExportReceiptsPage'));
 const ForbiddenPage = lazy(() => import('./pages/ForbiddenPage'));
+const ImportReceiptsPage = lazy(() => import('./pages/ImportReceiptsPage'));
 const InventoryPage = lazy(() => import('./pages/InventoryPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const ProductsPage = lazy(() => import('./pages/ProductsPage'));
 const RolesPage = lazy(() => import('./pages/RolesPage'));
+const StockTransfersPage = lazy(() => import('./pages/StockTransfersPage'));
 const UsersPage = lazy(() => import('./pages/UsersPage'));
+const WarehousesPage = lazy(() => import('./pages/WarehousesPage'));
 
 function RouteLoader() {
   return (
@@ -102,10 +106,47 @@ function App() {
             )}
           />
           <Route
+            path="import-receipts"
+            element={(
+              <ProtectedRoute requiredPermission="import_receipts.view">
+                <ImportReceiptsPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="export-receipts"
+            element={(
+              <ProtectedRoute requiredPermission="export_receipts.view">
+                <ExportReceiptsPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="stock-transfers"
+            element={(
+              <ProtectedRoute requiredPermission="stock_transfers.view">
+                <StockTransfersPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
             path="inventory"
             element={(
               <ProtectedRoute requiredPermission="inventory.view">
                 <InventoryPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="warehouses"
+            element={(
+              <ProtectedRoute
+                requiredPermissionsAny={[
+                  'warehouses.view',
+                  'locations.view',
+                ]}
+              >
+                <WarehousesPage />
               </ProtectedRoute>
             )}
           />

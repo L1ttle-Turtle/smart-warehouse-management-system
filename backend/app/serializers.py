@@ -5,10 +5,16 @@ from .models import (
     Category,
     Customer,
     Employee,
+    ExportReceipt,
+    ExportReceiptDetail,
     Inventory,
     InventoryMovement,
+    ImportReceipt,
+    ImportReceiptDetail,
     Product,
     Role,
+    StockTransfer,
+    StockTransferDetail,
     Supplier,
     User,
     UserPermissionDelegation,
@@ -261,6 +267,140 @@ def serialize_inventory_movement(movement: InventoryMovement):
         "note": movement.note,
         "created_at": movement.created_at.isoformat() if movement.created_at else None,
         "updated_at": movement.updated_at.isoformat() if movement.updated_at else None,
+    }
+
+
+def serialize_import_receipt_detail(detail: ImportReceiptDetail):
+    return {
+        "id": detail.id,
+        "product_id": detail.product_id,
+        "product_code": detail.product.product_code if detail.product else None,
+        "product_name": detail.product.product_name if detail.product else None,
+        "location_id": detail.location_id,
+        "location_code": detail.location.location_code if detail.location else None,
+        "location_name": detail.location.location_name if detail.location else None,
+        "quantity": detail.quantity,
+        "created_at": detail.created_at.isoformat() if detail.created_at else None,
+        "updated_at": detail.updated_at.isoformat() if detail.updated_at else None,
+    }
+
+
+def serialize_import_receipt(receipt: ImportReceipt):
+    total_quantity = sum(detail.quantity for detail in receipt.details)
+    return {
+        "id": receipt.id,
+        "receipt_code": receipt.receipt_code,
+        "warehouse_id": receipt.warehouse_id,
+        "warehouse_code": receipt.warehouse.warehouse_code if receipt.warehouse else None,
+        "warehouse_name": receipt.warehouse.warehouse_name if receipt.warehouse else None,
+        "supplier_id": receipt.supplier_id,
+        "supplier_code": receipt.supplier.supplier_code if receipt.supplier else None,
+        "supplier_name": receipt.supplier.supplier_name if receipt.supplier else None,
+        "created_by": receipt.created_by,
+        "created_by_name": receipt.creator.full_name if receipt.creator else None,
+        "confirmed_by": receipt.confirmed_by,
+        "confirmed_by_name": receipt.confirmer.full_name if receipt.confirmer else None,
+        "status": receipt.status,
+        "note": receipt.note,
+        "detail_count": len(receipt.details),
+        "total_quantity": total_quantity,
+        "confirmed_at": receipt.confirmed_at.isoformat() if receipt.confirmed_at else None,
+        "created_at": receipt.created_at.isoformat() if receipt.created_at else None,
+        "updated_at": receipt.updated_at.isoformat() if receipt.updated_at else None,
+        "details": [serialize_import_receipt_detail(detail) for detail in receipt.details],
+    }
+
+
+def serialize_export_receipt_detail(detail: ExportReceiptDetail):
+    return {
+        "id": detail.id,
+        "product_id": detail.product_id,
+        "product_code": detail.product.product_code if detail.product else None,
+        "product_name": detail.product.product_name if detail.product else None,
+        "location_id": detail.location_id,
+        "location_code": detail.location.location_code if detail.location else None,
+        "location_name": detail.location.location_name if detail.location else None,
+        "quantity": detail.quantity,
+        "created_at": detail.created_at.isoformat() if detail.created_at else None,
+        "updated_at": detail.updated_at.isoformat() if detail.updated_at else None,
+    }
+
+
+def serialize_export_receipt(receipt: ExportReceipt):
+    total_quantity = sum(detail.quantity for detail in receipt.details)
+    return {
+        "id": receipt.id,
+        "receipt_code": receipt.receipt_code,
+        "warehouse_id": receipt.warehouse_id,
+        "warehouse_code": receipt.warehouse.warehouse_code if receipt.warehouse else None,
+        "warehouse_name": receipt.warehouse.warehouse_name if receipt.warehouse else None,
+        "customer_id": receipt.customer_id,
+        "customer_code": receipt.customer.customer_code if receipt.customer else None,
+        "customer_name": receipt.customer.customer_name if receipt.customer else None,
+        "created_by": receipt.created_by,
+        "created_by_name": receipt.creator.full_name if receipt.creator else None,
+        "confirmed_by": receipt.confirmed_by,
+        "confirmed_by_name": receipt.confirmer.full_name if receipt.confirmer else None,
+        "status": receipt.status,
+        "note": receipt.note,
+        "detail_count": len(receipt.details),
+        "total_quantity": total_quantity,
+        "confirmed_at": receipt.confirmed_at.isoformat() if receipt.confirmed_at else None,
+        "created_at": receipt.created_at.isoformat() if receipt.created_at else None,
+        "updated_at": receipt.updated_at.isoformat() if receipt.updated_at else None,
+        "details": [serialize_export_receipt_detail(detail) for detail in receipt.details],
+    }
+
+
+def serialize_stock_transfer_detail(detail: StockTransferDetail):
+    return {
+        "id": detail.id,
+        "product_id": detail.product_id,
+        "product_code": detail.product.product_code if detail.product else None,
+        "product_name": detail.product.product_name if detail.product else None,
+        "source_location_id": detail.source_location_id,
+        "source_location_code": detail.source_location.location_code if detail.source_location else None,
+        "source_location_name": detail.source_location.location_name if detail.source_location else None,
+        "target_location_id": detail.target_location_id,
+        "target_location_code": detail.target_location.location_code if detail.target_location else None,
+        "target_location_name": detail.target_location.location_name if detail.target_location else None,
+        "quantity": detail.quantity,
+        "created_at": detail.created_at.isoformat() if detail.created_at else None,
+        "updated_at": detail.updated_at.isoformat() if detail.updated_at else None,
+    }
+
+
+def serialize_stock_transfer(transfer: StockTransfer):
+    total_quantity = sum(detail.quantity for detail in transfer.details)
+    return {
+        "id": transfer.id,
+        "transfer_code": transfer.transfer_code,
+        "source_warehouse_id": transfer.source_warehouse_id,
+        "source_warehouse_code": (
+            transfer.source_warehouse.warehouse_code if transfer.source_warehouse else None
+        ),
+        "source_warehouse_name": (
+            transfer.source_warehouse.warehouse_name if transfer.source_warehouse else None
+        ),
+        "target_warehouse_id": transfer.target_warehouse_id,
+        "target_warehouse_code": (
+            transfer.target_warehouse.warehouse_code if transfer.target_warehouse else None
+        ),
+        "target_warehouse_name": (
+            transfer.target_warehouse.warehouse_name if transfer.target_warehouse else None
+        ),
+        "created_by": transfer.created_by,
+        "created_by_name": transfer.creator.full_name if transfer.creator else None,
+        "confirmed_by": transfer.confirmed_by,
+        "confirmed_by_name": transfer.confirmer.full_name if transfer.confirmer else None,
+        "status": transfer.status,
+        "note": transfer.note,
+        "detail_count": len(transfer.details),
+        "total_quantity": total_quantity,
+        "confirmed_at": transfer.confirmed_at.isoformat() if transfer.confirmed_at else None,
+        "created_at": transfer.created_at.isoformat() if transfer.created_at else None,
+        "updated_at": transfer.updated_at.isoformat() if transfer.updated_at else None,
+        "details": [serialize_stock_transfer_detail(detail) for detail in transfer.details],
     }
 
 
