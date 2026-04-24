@@ -113,6 +113,150 @@ def test_staff_can_create_and_confirm_stock_transfer_between_warehouses(client, 
         assert movements[1].quantity_change == 4
 
 
+def test_draft_stock_transfer_can_be_updated_before_confirm(client, auth_headers, app):
+    context = get_seed_transfer_context(app)
+
+    create_response = client.post(
+        "/stock-transfers",
+        headers=auth_headers("staff", "Staff@123"),
+        json={
+            "source_warehouse_id": context["source_warehouse_id"],
+            "target_warehouse_id": context["target_warehouse_id"],
+            "note": "Phieu dieu chuyen can sua",
+            "items": [
+                {
+                    "product_id": context["product_id"],
+                    "source_location_id": context["source_location_id"],
+                    "target_location_id": context["target_location_id"],
+                    "quantity": 2,
+                },
+            ],
+        },
+    )
+    assert create_response.status_code == 201
+    transfer_id = create_response.get_json()["item"]["id"]
+
+    update_response = client.put(
+        f"/stock-transfers/{transfer_id}",
+        headers=auth_headers("staff", "Staff@123"),
+        json={
+            "source_warehouse_id": context["source_warehouse_id"],
+            "target_warehouse_id": context["target_warehouse_id"],
+            "note": "Phieu dieu chuyen da sua so luong",
+            "items": [
+                {
+                    "product_id": context["product_id"],
+                    "source_location_id": context["source_location_id"],
+                    "target_location_id": context["target_location_id"],
+                    "quantity": 5,
+                },
+            ],
+        },
+    )
+
+    assert update_response.status_code == 200
+    assert update_response.get_json()["item"]["note"] == "Phieu dieu chuyen da sua so luong"
+    assert update_response.get_json()["item"]["total_quantity"] == 5
+
+    confirm_response = client.post(
+        f"/stock-transfers/{transfer_id}/confirm",
+        headers=auth_headers("staff", "Staff@123"),
+    )
+    assert confirm_response.status_code == 200
+
+    with app.app_context():
+        source_inventory = Inventory.query.filter_by(
+            warehouse_id=context["source_warehouse_id"],
+            location_id=context["source_location_id"],
+            product_id=context["product_id"],
+        ).first()
+        target_inventory = Inventory.query.filter_by(
+            warehouse_id=context["target_warehouse_id"],
+            location_id=context["target_location_id"],
+            product_id=context["product_id"],
+        ).first()
+        movements = InventoryMovement.query.filter_by(
+            reference_type="stock_transfer",
+            reference_id=transfer_id,
+        ).order_by(InventoryMovement.id.asc()).all()
+        actions = {
+            log.action
+            for log in AuditLog.query.filter(
+                AuditLog.entity_type == "stock_transfer",
+                AuditLog.entity_id == transfer_id,
+            ).all()
+        }
+
+        assert source_inventory.quantity == context["starting_source_quantity"] - 5
+        assert target_inventory.quantity == context["starting_target_quantity"] + 5
+        assert len(movements) == 2
+        assert movements[0].quantity_change == -5
+        assert movements[1].quantity_change == 5
+        assert "stock_transfers.updated" in actions
+
+
+def test_draft_stock_transfer_can_be_cancelled_without_changing_inventory(client, auth_headers, app):
+    context = get_seed_transfer_context(app)
+
+    create_response = client.post(
+        "/stock-transfers",
+        headers=auth_headers("staff", "Staff@123"),
+        json={
+            "source_warehouse_id": context["source_warehouse_id"],
+            "target_warehouse_id": context["target_warehouse_id"],
+            "note": "Phieu dieu chuyen can huy",
+            "items": [
+                {
+                    "product_id": context["product_id"],
+                    "source_location_id": context["source_location_id"],
+                    "target_location_id": context["target_location_id"],
+                    "quantity": 2,
+                },
+            ],
+        },
+    )
+    assert create_response.status_code == 201
+    transfer_id = create_response.get_json()["item"]["id"]
+
+    cancel_response = client.post(
+        f"/stock-transfers/{transfer_id}/cancel",
+        headers=auth_headers("staff", "Staff@123"),
+    )
+
+    assert cancel_response.status_code == 200
+    assert cancel_response.get_json()["item"]["status"] == "cancelled"
+
+    with app.app_context():
+        source_inventory = Inventory.query.filter_by(
+            warehouse_id=context["source_warehouse_id"],
+            location_id=context["source_location_id"],
+            product_id=context["product_id"],
+        ).first()
+        target_inventory = Inventory.query.filter_by(
+            warehouse_id=context["target_warehouse_id"],
+            location_id=context["target_location_id"],
+            product_id=context["product_id"],
+        ).first()
+        transfer = StockTransfer.query.filter_by(id=transfer_id).first()
+        movement = InventoryMovement.query.filter_by(
+            reference_type="stock_transfer",
+            reference_id=transfer_id,
+        ).first()
+        actions = {
+            log.action
+            for log in AuditLog.query.filter(
+                AuditLog.entity_type == "stock_transfer",
+                AuditLog.entity_id == transfer_id,
+            ).all()
+        }
+
+        assert source_inventory.quantity == context["starting_source_quantity"]
+        assert target_inventory.quantity == context["starting_target_quantity"]
+        assert transfer.status == "cancelled"
+        assert movement is None
+        assert "stock_transfers.cancelled" in actions
+
+
 def test_stock_transfer_permission_matrix(client, auth_headers):
     manager_response = client.get("/stock-transfers", headers=auth_headers("manager", "Manager@123"))
     staff_response = client.get("/stock-transfers", headers=auth_headers("staff", "Staff@123"))
@@ -266,9 +410,77 @@ def test_confirmed_stock_transfer_cannot_be_confirmed_again(client, auth_headers
         f"/stock-transfers/{transfer_id}/confirm",
         headers=auth_headers("admin", "Admin@123"),
     )
+    update_response = client.put(
+        f"/stock-transfers/{transfer_id}",
+        headers=auth_headers("admin", "Admin@123"),
+        json={
+            "source_warehouse_id": context["source_warehouse_id"],
+            "target_warehouse_id": context["target_warehouse_id"],
+            "items": [
+                {
+                    "product_id": context["product_id"],
+                    "source_location_id": context["source_location_id"],
+                    "target_location_id": context["target_location_id"],
+                    "quantity": 3,
+                },
+            ],
+        },
+    )
 
     assert first_confirm.status_code == 200
     assert second_confirm.status_code == 400
+    assert update_response.status_code == 400
+
+
+def test_cancelled_stock_transfer_cannot_be_confirmed_or_updated_again(client, auth_headers, app):
+    context = get_seed_transfer_context(app)
+
+    create_response = client.post(
+        "/stock-transfers",
+        headers=auth_headers("admin", "Admin@123"),
+        json={
+            "source_warehouse_id": context["source_warehouse_id"],
+            "target_warehouse_id": context["target_warehouse_id"],
+            "items": [
+                {
+                    "product_id": context["product_id"],
+                    "source_location_id": context["source_location_id"],
+                    "target_location_id": context["target_location_id"],
+                    "quantity": 2,
+                },
+            ],
+        },
+    )
+    transfer_id = create_response.get_json()["item"]["id"]
+
+    cancel_response = client.post(
+        f"/stock-transfers/{transfer_id}/cancel",
+        headers=auth_headers("admin", "Admin@123"),
+    )
+    confirm_response = client.post(
+        f"/stock-transfers/{transfer_id}/confirm",
+        headers=auth_headers("admin", "Admin@123"),
+    )
+    update_response = client.put(
+        f"/stock-transfers/{transfer_id}",
+        headers=auth_headers("admin", "Admin@123"),
+        json={
+            "source_warehouse_id": context["source_warehouse_id"],
+            "target_warehouse_id": context["target_warehouse_id"],
+            "items": [
+                {
+                    "product_id": context["product_id"],
+                    "source_location_id": context["source_location_id"],
+                    "target_location_id": context["target_location_id"],
+                    "quantity": 3,
+                },
+            ],
+        },
+    )
+
+    assert cancel_response.status_code == 200
+    assert confirm_response.status_code == 400
+    assert update_response.status_code == 400
 
 
 def test_stock_transfer_create_confirm_write_audit_log(client, auth_headers, app):

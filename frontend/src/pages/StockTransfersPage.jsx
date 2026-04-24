@@ -1,8 +1,10 @@
 import {
   CheckCircleOutlined,
+  EditOutlined,
   MinusCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
+  StopOutlined,
 } from '@ant-design/icons';
 import {
   Alert,
@@ -14,6 +16,7 @@ import {
   Form,
   Input,
   InputNumber,
+  Popconfirm,
   Row,
   Select,
   Space,
@@ -33,6 +36,7 @@ const STATUS_OPTIONS = [
   { label: 'Tất cả trạng thái', value: 'all' },
   { label: 'Nháp', value: 'draft' },
   { label: 'Đã xác nhận', value: 'confirmed' },
+  { label: 'Đã hủy', value: 'cancelled' },
 ];
 
 function StockTransfersPage() {
@@ -47,7 +51,9 @@ function StockTransfersPage() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [confirmingId, setConfirmingId] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingTransfer, setEditingTransfer] = useState(null);
   const [transfers, setTransfers] = useState([]);
   const [inventoryRows, setInventoryRows] = useState([]);
   const [searchInput, setSearchInput] = useState('');
@@ -241,10 +247,18 @@ function StockTransfersPage() {
       };
     }
 
+    if (selectedTransfer.status === 'cancelled') {
+      return {
+        type: 'info',
+        title: 'Phiếu đã hủy, tồn kho không thay đổi.',
+        description: 'Phiếu này được giữ lại để đối chiếu lịch sử, nhưng không thể chỉnh sửa hoặc xác nhận thêm.',
+      };
+    }
+
     return {
       type: 'warning',
       title: 'Phiếu đang ở trạng thái nháp, tồn kho chưa thay đổi.',
-      description: 'Khi bấm xác nhận, backend sẽ kiểm tra tồn kho nguồn; nếu đủ hàng thì ghi giảm nguồn, tăng đích và sinh movement để truy vết.',
+      description: 'Khi bấm xác nhận, backend sẽ kiểm tra tồn kho nguồn; nếu đủ hàng thì ghi giảm nguồn, tăng đích và sinh movement để truy vết. Bạn cũng có thể hủy phiếu nếu tạo sai và chưa muốn tác động tồn kho thật.',
     };
   }, [selectedTransfer]);
 
@@ -264,6 +278,7 @@ function StockTransfersPage() {
   }, [selectedInventoryRows, transfers]);
 
   const openCreateDrawer = () => {
+    setEditingTransfer(null);
     form.resetFields();
     form.setFieldsValue({
       source_warehouse_id: undefined,
@@ -279,8 +294,26 @@ function StockTransfersPage() {
     setDrawerOpen(true);
   };
 
+  const openEditDrawer = (transfer) => {
+    setEditingTransfer(transfer);
+    form.resetFields();
+    form.setFieldsValue({
+      source_warehouse_id: transfer.source_warehouse_id,
+      target_warehouse_id: transfer.target_warehouse_id,
+      note: transfer.note || '',
+      items: transfer.details.map((detail) => ({
+        product_id: detail.product_id,
+        source_location_id: detail.source_location_id,
+        target_location_id: detail.target_location_id,
+        quantity: detail.quantity,
+      })),
+    });
+    setDrawerOpen(true);
+  };
+
   const closeDrawer = () => {
     setDrawerOpen(false);
+    setEditingTransfer(null);
     form.resetFields();
   };
 
@@ -299,11 +332,13 @@ function StockTransfersPage() {
 
     setSubmitting(true);
     try {
-      const response = await api.post('/stock-transfers', payload);
-      message.success('Đã tạo phiếu điều chuyển nháp.');
+      const response = editingTransfer
+        ? await api.put(`/stock-transfers/${editingTransfer.id}`, payload)
+        : await api.post('/stock-transfers', payload);
+      message.success(editingTransfer ? 'Đã cập nhật phiếu điều chuyển nháp.' : 'Đã tạo phiếu điều chuyển nháp.');
       setSelectedTransferId(response.data.item?.id || null);
       closeDrawer();
-      await fetchTransfers({ page: 1 });
+      await fetchTransfers({ page: editingTransfer ? currentPage : 1 });
     } catch (error) {
       message.error(error.response?.data?.message || 'Không lưu được phiếu điều chuyển.');
     } finally {
@@ -339,6 +374,34 @@ function StockTransfersPage() {
       message.error(error.response?.data?.message || 'Không xác nhận được phiếu điều chuyển.');
     } finally {
       setConfirmingId(null);
+    }
+  };
+
+  const handleCancel = async (transfer) => {
+    const nextStatusFilter = statusFilter === 'draft' ? 'all' : statusFilter;
+
+    setCancellingId(transfer.id);
+    try {
+      await api.post(`/stock-transfers/${transfer.id}/cancel`);
+      message.success(`Đã hủy phiếu ${transfer.transfer_code}. Tồn kho không thay đổi.`);
+      setSelectedTransferId(transfer.id);
+
+      if (nextStatusFilter !== statusFilter) {
+        setStatusFilter(nextStatusFilter);
+        setPagination((current) => ({ ...current, current: 1 }));
+      }
+
+      await fetchTransfers({
+        page: 1,
+        status: nextStatusFilter,
+        sourceWarehouse: sourceWarehouseFilter,
+        targetWarehouse: targetWarehouseFilter,
+        search: searchQuery,
+      });
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Không hủy được phiếu điều chuyển nháp.');
+    } finally {
+      setCancellingId(null);
     }
   };
 
@@ -551,25 +614,55 @@ function StockTransfersPage() {
             {
               title: 'Thao tác',
               key: 'actions',
-              width: 300,
+              width: 400,
               render: (_, record) => (
                 <Space wrap>
                   <Button size="small" onClick={() => setSelectedTransferId(record.id)}>
                     Theo dõi tồn kho
                   </Button>
                   {canManage && record.status === 'draft' ? (
-                    <Button
-                      size="small"
-                      type="primary"
-                      icon={<CheckCircleOutlined />}
-                      loading={confirmingId === record.id}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleConfirm(record);
-                      }}
-                    >
-                      Xác nhận
-                    </Button>
+                    <>
+                      <Button
+                        size="small"
+                        icon={<EditOutlined />}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openEditDrawer(record);
+                        }}
+                      >
+                        Chỉnh sửa
+                      </Button>
+                      <Button
+                        size="small"
+                        type="primary"
+                        icon={<CheckCircleOutlined />}
+                        loading={confirmingId === record.id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleConfirm(record);
+                        }}
+                      >
+                        Xác nhận
+                      </Button>
+                      <Popconfirm
+                        title="Hủy phiếu điều chuyển nháp?"
+                        description="Phiếu sẽ chuyển sang trạng thái hủy và không làm thay đổi tồn kho."
+                        okText="Hủy phiếu"
+                        cancelText="Giữ lại"
+                        okButtonProps={{ danger: true }}
+                        onConfirm={() => handleCancel(record)}
+                      >
+                        <Button
+                          danger
+                          size="small"
+                          icon={<StopOutlined />}
+                          loading={cancellingId === record.id}
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          Hủy phiếu
+                        </Button>
+                      </Popconfirm>
+                    </>
                   ) : null}
                 </Space>
               ),
@@ -696,14 +789,14 @@ function StockTransfersPage() {
         onClose={closeDrawer}
         destroyOnClose
         size={820}
-        title="Thêm phiếu điều chuyển nháp"
+        title={editingTransfer ? `Chỉnh sửa phiếu ${editingTransfer.transfer_code}` : 'Thêm phiếu điều chuyển nháp'}
       >
         <Space orientation="vertical" size={16} style={{ width: '100%' }}>
           <Alert
             showIcon
-            type="info"
-            title="Tạo phiếu điều chuyển tối thiểu cho demo"
-            description="Bước này chỉ tạo phiếu nháp. Tồn kho chỉ đổi thật khi bạn quay lại danh sách và bấm xác nhận phiếu."
+            type={editingTransfer ? 'warning' : 'info'}
+            title={editingTransfer ? 'Chỉnh sửa phiếu điều chuyển nháp trước khi xác nhận' : 'Tạo phiếu điều chuyển tối thiểu cho demo'}
+            description={editingTransfer ? 'Bạn có thể sửa kho nguồn, kho đích, vị trí, sản phẩm hoặc số lượng khi phiếu còn nháp. Tồn kho vẫn chưa thay đổi cho đến khi xác nhận.' : 'Bước này chỉ tạo phiếu nháp. Tồn kho chỉ đổi thật khi bạn quay lại danh sách và bấm xác nhận phiếu.'}
           />
 
           <Form
@@ -894,7 +987,7 @@ function StockTransfersPage() {
             <div className="resource-drawer-actions">
               <Button onClick={closeDrawer}>Đóng</Button>
               <Button type="primary" htmlType="submit" loading={submitting}>
-                Tạo phiếu nháp
+                {editingTransfer ? 'Lưu phiếu nháp' : 'Tạo phiếu nháp'}
               </Button>
             </div>
           </Form>

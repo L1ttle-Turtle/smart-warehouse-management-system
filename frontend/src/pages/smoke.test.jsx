@@ -1009,7 +1009,9 @@ test('renders stock transfers page with draft transfer data', async () => {
   await waitFor(() => expect(screen.getByText(/Luồng điều chuyển kho tối thiểu/i)).toBeInTheDocument());
   await waitFor(() => expect(screen.getAllByText(/TRF-DEMO-001/i).length).toBeGreaterThan(0));
   expect(screen.getByRole('button', { name: /plus Thêm phiếu điều chuyển nháp/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Chỉnh sửa/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Xác nhận/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Hủy phiếu/i })).toBeInTheDocument();
 });
 
 test('staff can render stock transfers page and see transfer actions', async () => {
@@ -1026,7 +1028,9 @@ test('staff can render stock transfers page and see transfer actions', async () 
 
   await waitFor(() => expect(screen.getAllByText(/TRF-DEMO-001/i).length).toBeGreaterThan(0));
   expect(screen.getByRole('button', { name: /plus Thêm phiếu điều chuyển nháp/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Chỉnh sửa/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Xác nhận/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Hủy phiếu/i })).toBeInTheDocument();
 });
 
 test('staff can render inventory page', async () => {
