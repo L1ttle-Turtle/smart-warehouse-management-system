@@ -56,6 +56,8 @@ function ExportReceiptsPage() {
   const [editingReceipt, setEditingReceipt] = useState(null);
   const [receipts, setReceipts] = useState([]);
   const [inventoryRows, setInventoryRows] = useState([]);
+  const [receiptMovements, setReceiptMovements] = useState([]);
+  const [movementLoading, setMovementLoading] = useState(false);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -177,6 +179,29 @@ function ExportReceiptsPage() {
     }
   }, [canViewInventory]);
 
+  const fetchReceiptMovements = useCallback(async (receiptId = selectedReceiptId) => {
+    if (!canViewInventory || !receiptId) {
+      setReceiptMovements([]);
+      return;
+    }
+
+    setMovementLoading(true);
+    try {
+      const response = await api.get('/inventory/movements', {
+        params: {
+          reference_type: 'export_receipt',
+          reference_id: receiptId,
+        },
+      });
+      setReceiptMovements(response.data.items || []);
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Không tải được lịch sử xuất kho.');
+      setReceiptMovements([]);
+    } finally {
+      setMovementLoading(false);
+    }
+  }, [canViewInventory, selectedReceiptId]);
+
   useEffect(() => {
     fetchOptions();
   }, [fetchOptions]);
@@ -188,6 +213,10 @@ function ExportReceiptsPage() {
   useEffect(() => {
     fetchInventory();
   }, [fetchInventory]);
+
+  useEffect(() => {
+    fetchReceiptMovements();
+  }, [fetchReceiptMovements]);
 
   useEffect(() => {
     if (!receipts.length) {
@@ -350,6 +379,7 @@ function ExportReceiptsPage() {
           search: searchQuery,
         }),
         fetchInventory(),
+        fetchReceiptMovements(receipt.id),
       ]);
     } catch (error) {
       message.error(error.response?.data?.message || 'Không xác nhận được phiếu xuất.');
@@ -381,6 +411,7 @@ function ExportReceiptsPage() {
         }),
         fetchInventory(),
       ]);
+      setReceiptMovements([]);
     } catch (error) {
       message.error(error.response?.data?.message || 'Không hủy được phiếu xuất nháp.');
     } finally {
@@ -403,6 +434,54 @@ function ExportReceiptsPage() {
       title: 'Số lượng xuất',
       dataIndex: 'quantity',
       render: formatNumber,
+    },
+  ];
+
+  const movementColumns = [
+    {
+      title: 'Thời gian',
+      dataIndex: 'created_at',
+      render: formatDateTime,
+    },
+    {
+      title: 'Kho',
+      dataIndex: 'warehouse_name',
+      render: (value) => value || '-',
+    },
+    {
+      title: 'Vị trí',
+      dataIndex: 'location_name',
+      render: (value) => value || '-',
+    },
+    {
+      title: 'Sản phẩm',
+      dataIndex: 'product_name',
+      render: (value, record) => `${value || '-'}${record.product_code ? ` (${record.product_code})` : ''}`,
+    },
+    {
+      title: 'Loại movement',
+      dataIndex: 'movement_type',
+      render: (value) => <StatusTag value={value} />,
+    },
+    {
+      title: 'Trước',
+      dataIndex: 'quantity_before',
+      render: formatNumber,
+    },
+    {
+      title: 'Biến động',
+      dataIndex: 'quantity_change',
+      render: formatNumber,
+    },
+    {
+      title: 'Sau',
+      dataIndex: 'quantity_after',
+      render: formatNumber,
+    },
+    {
+      title: 'Người thực hiện',
+      dataIndex: 'performer_name',
+      render: (value) => value || '-',
     },
   ];
 
@@ -708,54 +787,86 @@ function ExportReceiptsPage() {
             </Card>
 
             {canViewInventory ? (
-              <Card className="page-card" styles={{ body: { padding: 18 } }}>
-                <Space orientation="vertical" size={12} style={{ width: '100%' }}>
-                  <Typography.Title level={5} style={{ margin: 0 }}>
-                    Tồn kho hiện tại tại các dòng hàng liên quan
-                  </Typography.Title>
-                  <Table
-                    rowKey="id"
-                    size="small"
-                    pagination={false}
-                    dataSource={selectedInventoryRows}
-                    columns={[
-                      {
-                        title: 'Kho',
-                        dataIndex: 'warehouse_name',
-                        render: (value, record) => `${value} (${record.warehouse_code})`,
-                      },
-                      {
-                        title: 'Vị trí',
-                        dataIndex: 'location_name',
-                        render: (value, record) => `${value} (${record.location_code})`,
-                      },
-                      {
-                        title: 'Sản phẩm',
-                        dataIndex: 'product_name',
-                        render: (value, record) => `${value} (${record.product_code})`,
-                      },
-                      {
-                        title: 'Tồn hiện tại',
-                        dataIndex: 'quantity',
-                        render: formatNumber,
-                      },
-                      {
-                        title: 'Cập nhật gần nhất',
-                        dataIndex: 'updated_at',
-                        render: formatDateTime,
-                      },
-                    ]}
-                    locale={{
-                      emptyText: (
-                        <Empty
-                          image={Empty.PRESENTED_IMAGE_SIMPLE}
-                          description="Chưa tìm thấy dòng tồn kho nào khớp với phiếu đang theo dõi."
-                        />
-                      ),
-                    }}
-                  />
-                </Space>
-              </Card>
+              <>
+                <Card className="page-card" styles={{ body: { padding: 18 } }}>
+                  <Space orientation="vertical" size={12} style={{ width: '100%' }}>
+                    <Typography.Title level={5} style={{ margin: 0 }}>
+                      Tồn kho hiện tại tại các dòng hàng liên quan
+                    </Typography.Title>
+                    <Table
+                      rowKey="id"
+                      size="small"
+                      pagination={false}
+                      dataSource={selectedInventoryRows}
+                      columns={[
+                        {
+                          title: 'Kho',
+                          dataIndex: 'warehouse_name',
+                          render: (value, record) => `${value} (${record.warehouse_code})`,
+                        },
+                        {
+                          title: 'Vị trí',
+                          dataIndex: 'location_name',
+                          render: (value, record) => `${value} (${record.location_code})`,
+                        },
+                        {
+                          title: 'Sản phẩm',
+                          dataIndex: 'product_name',
+                          render: (value, record) => `${value} (${record.product_code})`,
+                        },
+                        {
+                          title: 'Tồn hiện tại',
+                          dataIndex: 'quantity',
+                          render: formatNumber,
+                        },
+                        {
+                          title: 'Cập nhật gần nhất',
+                          dataIndex: 'updated_at',
+                          render: formatDateTime,
+                        },
+                      ]}
+                      locale={{
+                        emptyText: (
+                          <Empty
+                            image={Empty.PRESENTED_IMAGE_SIMPLE}
+                            description="Chưa tìm thấy dòng tồn kho nào khớp với phiếu đang theo dõi."
+                          />
+                        ),
+                      }}
+                    />
+                  </Space>
+                </Card>
+
+                <Card className="page-card" styles={{ body: { padding: 18 } }}>
+                  <Space orientation="vertical" size={12} style={{ width: '100%' }}>
+                    <Typography.Title level={5} style={{ margin: 0 }}>
+                      Lịch sử xuất kho đã ghi nhận
+                    </Typography.Title>
+                    <Typography.Text type="secondary">
+                      Khi phiếu được xác nhận, hệ thống sinh movement giảm tồn kho thật để phục vụ kiểm kê và truy vết xuất hàng.
+                    </Typography.Text>
+                    <Table
+                      rowKey="id"
+                      size="small"
+                      loading={movementLoading}
+                      pagination={false}
+                      dataSource={receiptMovements}
+                      columns={movementColumns}
+                      scroll={{ x: 1180 }}
+                      locale={{
+                        emptyText: (
+                          <Empty
+                            image={Empty.PRESENTED_IMAGE_SIMPLE}
+                            description={selectedReceipt.status === 'confirmed'
+                              ? 'Phiếu đã xác nhận nhưng chưa có movement nào khớp để hiển thị.'
+                              : 'Phiếu chỉ sinh movement sau khi được xác nhận.'}
+                          />
+                        ),
+                      }}
+                    />
+                  </Space>
+                </Card>
+              </>
             ) : null}
           </Space>
         )}

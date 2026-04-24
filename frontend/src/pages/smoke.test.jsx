@@ -128,7 +128,7 @@ let authState = buildAuthState();
 
 vi.mock('../api/client', () => ({
   default: {
-    get: vi.fn((url) => {
+    get: vi.fn((url, config) => {
       if (url === '/roles') {
         return Promise.resolve({
           data: {
@@ -443,6 +443,68 @@ vi.mock('../api/client', () => ({
       }
 
       if (url === '/inventory/movements') {
+        if (config?.params?.reference_type === 'import_receipt') {
+          return Promise.resolve({
+            data: {
+              items: [
+                {
+                  id: 11,
+                  warehouse_id: 1,
+                  warehouse_name: 'Kho Trung Tam',
+                  location_id: 1,
+                  location_name: 'Ke A-01',
+                  product_id: 1,
+                  product_code: 'PRD001',
+                  product_name: 'Máy quét mã vạch',
+                  movement_type: 'import',
+                  reference_type: 'import_receipt',
+                  reference_id: 1,
+                  quantity_before: 18,
+                  quantity_change: 6,
+                  quantity_after: 24,
+                  performer_name: 'Manager User',
+                  created_at: '2026-04-22T10:00:00',
+                },
+              ],
+            },
+          });
+        }
+
+        if (config?.params?.reference_type === 'export_receipt') {
+          return Promise.resolve({
+            data: {
+              items: [
+                {
+                  id: 12,
+                  warehouse_id: 1,
+                  warehouse_name: 'Kho Trung Tam',
+                  location_id: 1,
+                  location_name: 'Ke A-01',
+                  product_id: 1,
+                  product_code: 'PRD001',
+                  product_name: 'Máy quét mã vạch',
+                  movement_type: 'export',
+                  reference_type: 'export_receipt',
+                  reference_id: 1,
+                  quantity_before: 24,
+                  quantity_change: -4,
+                  quantity_after: 20,
+                  performer_name: 'Manager User',
+                  created_at: '2026-04-22T11:00:00',
+                },
+              ],
+            },
+          });
+        }
+
+        if (config?.params?.reference_type === 'stock_transfer') {
+          return Promise.resolve({
+            data: {
+              items: [],
+            },
+          });
+        }
+
         return Promise.resolve({
           data: {
             items: [
@@ -952,6 +1014,7 @@ test('renders import receipts page with draft receipt data', async () => {
   expect(screen.getByRole('button', { name: /Chỉnh sửa/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Xác nhận/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Hủy phiếu/i })).toBeInTheDocument();
+  expect(screen.getByText(/Lịch sử nhập kho đã ghi nhận/i)).toBeInTheDocument();
 });
 
 test('staff can render import receipts page and see inbound actions', async () => {
@@ -971,6 +1034,7 @@ test('staff can render import receipts page and see inbound actions', async () =
   expect(screen.getByRole('button', { name: /Chỉnh sửa/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Xác nhận/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Hủy phiếu/i })).toBeInTheDocument();
+  expect(screen.getByText(/Lịch sử nhập kho đã ghi nhận/i)).toBeInTheDocument();
 });
 
 test('renders export receipts page with draft receipt data', async () => {
@@ -982,6 +1046,7 @@ test('renders export receipts page with draft receipt data', async () => {
   expect(screen.getByRole('button', { name: /Chỉnh sửa/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Xác nhận/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Hủy phiếu/i })).toBeInTheDocument();
+  expect(screen.getByText(/Lịch sử xuất kho đã ghi nhận/i)).toBeInTheDocument();
 });
 
 test('staff can render export receipts page and see outbound actions', async () => {
@@ -1001,6 +1066,7 @@ test('staff can render export receipts page and see outbound actions', async () 
   expect(screen.getByRole('button', { name: /Chỉnh sửa/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Xác nhận/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Hủy phiếu/i })).toBeInTheDocument();
+  expect(screen.getByText(/Lịch sử xuất kho đã ghi nhận/i)).toBeInTheDocument();
 });
 
 test('renders stock transfers page with draft transfer data', async () => {
@@ -1012,6 +1078,7 @@ test('renders stock transfers page with draft transfer data', async () => {
   expect(screen.getByRole('button', { name: /Chỉnh sửa/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Xác nhận/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Hủy phiếu/i })).toBeInTheDocument();
+  expect(screen.getByText(/Lịch sử điều chuyển đã ghi nhận/i)).toBeInTheDocument();
 });
 
 test('staff can render stock transfers page and see transfer actions', async () => {
@@ -1031,6 +1098,7 @@ test('staff can render stock transfers page and see transfer actions', async () 
   expect(screen.getByRole('button', { name: /Chỉnh sửa/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Xác nhận/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Hủy phiếu/i })).toBeInTheDocument();
+  expect(screen.getByText(/Lịch sử điều chuyển đã ghi nhận/i)).toBeInTheDocument();
 });
 
 test('staff can render inventory page', async () => {

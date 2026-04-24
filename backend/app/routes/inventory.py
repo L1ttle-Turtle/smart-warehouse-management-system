@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 
 from ..models import Inventory, InventoryMovement
@@ -20,5 +20,15 @@ def list_inventory():
 @jwt_required()
 @permission_required("inventory.view")
 def list_movements():
-    items = InventoryMovement.query.order_by(InventoryMovement.created_at.desc()).all()
+    query = InventoryMovement.query
+
+    reference_type = (request.args.get("reference_type") or "").strip()
+    if reference_type:
+        query = query.filter(InventoryMovement.reference_type == reference_type)
+
+    reference_id = request.args.get("reference_id", type=int)
+    if reference_id is not None:
+        query = query.filter(InventoryMovement.reference_id == reference_id)
+
+    items = query.order_by(InventoryMovement.created_at.desc()).all()
     return jsonify({"items": [serialize_inventory_movement(item) for item in items]})

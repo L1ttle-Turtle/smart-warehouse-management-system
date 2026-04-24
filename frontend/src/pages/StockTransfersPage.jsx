@@ -56,6 +56,8 @@ function StockTransfersPage() {
   const [editingTransfer, setEditingTransfer] = useState(null);
   const [transfers, setTransfers] = useState([]);
   const [inventoryRows, setInventoryRows] = useState([]);
+  const [transferMovements, setTransferMovements] = useState([]);
+  const [movementLoading, setMovementLoading] = useState(false);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -187,6 +189,29 @@ function StockTransfersPage() {
     }
   }, [canViewInventory]);
 
+  const fetchTransferMovements = useCallback(async (transferId = selectedTransferId) => {
+    if (!canViewInventory || !transferId) {
+      setTransferMovements([]);
+      return;
+    }
+
+    setMovementLoading(true);
+    try {
+      const response = await api.get('/inventory/movements', {
+        params: {
+          reference_type: 'stock_transfer',
+          reference_id: transferId,
+        },
+      });
+      setTransferMovements(response.data.items || []);
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Không tải được lịch sử điều chuyển.');
+      setTransferMovements([]);
+    } finally {
+      setMovementLoading(false);
+    }
+  }, [canViewInventory, selectedTransferId]);
+
   useEffect(() => {
     fetchOptions();
   }, [fetchOptions]);
@@ -198,6 +223,10 @@ function StockTransfersPage() {
   useEffect(() => {
     fetchInventory();
   }, [fetchInventory]);
+
+  useEffect(() => {
+    fetchTransferMovements();
+  }, [fetchTransferMovements]);
 
   useEffect(() => {
     if (!transfers.length) {
@@ -369,6 +398,7 @@ function StockTransfersPage() {
           search: searchQuery,
         }),
         fetchInventory(),
+        fetchTransferMovements(transfer.id),
       ]);
     } catch (error) {
       message.error(error.response?.data?.message || 'Không xác nhận được phiếu điều chuyển.');
@@ -398,6 +428,7 @@ function StockTransfersPage() {
         targetWarehouse: targetWarehouseFilter,
         search: searchQuery,
       });
+      setTransferMovements([]);
     } catch (error) {
       message.error(error.response?.data?.message || 'Không hủy được phiếu điều chuyển nháp.');
     } finally {
@@ -425,6 +456,54 @@ function StockTransfersPage() {
       title: 'Số lượng điều chuyển',
       dataIndex: 'quantity',
       render: formatNumber,
+    },
+  ];
+
+  const movementColumns = [
+    {
+      title: 'Thời gian',
+      dataIndex: 'created_at',
+      render: formatDateTime,
+    },
+    {
+      title: 'Kho',
+      dataIndex: 'warehouse_name',
+      render: (value) => value || '-',
+    },
+    {
+      title: 'Vị trí',
+      dataIndex: 'location_name',
+      render: (value) => value || '-',
+    },
+    {
+      title: 'Sản phẩm',
+      dataIndex: 'product_name',
+      render: (value, record) => `${value || '-'}${record.product_code ? ` (${record.product_code})` : ''}`,
+    },
+    {
+      title: 'Loại movement',
+      dataIndex: 'movement_type',
+      render: (value) => <StatusTag value={value} />,
+    },
+    {
+      title: 'Trước',
+      dataIndex: 'quantity_before',
+      render: formatNumber,
+    },
+    {
+      title: 'Biến động',
+      dataIndex: 'quantity_change',
+      render: formatNumber,
+    },
+    {
+      title: 'Sau',
+      dataIndex: 'quantity_after',
+      render: formatNumber,
+    },
+    {
+      title: 'Người thực hiện',
+      dataIndex: 'performer_name',
+      render: (value) => value || '-',
     },
   ];
 
@@ -731,54 +810,86 @@ function StockTransfersPage() {
             </Card>
 
             {canViewInventory ? (
-              <Card className="page-card" styles={{ body: { padding: 18 } }}>
-                <Space orientation="vertical" size={12} style={{ width: '100%' }}>
-                  <Typography.Title level={5} style={{ margin: 0 }}>
-                    Tồn kho hiện tại tại các vị trí nguồn và đích
-                  </Typography.Title>
-                  <Table
-                    rowKey="id"
-                    size="small"
-                    pagination={false}
-                    dataSource={selectedInventoryRows}
-                    columns={[
-                      {
-                        title: 'Kho',
-                        dataIndex: 'warehouse_name',
-                        render: (value, record) => `${value} (${record.warehouse_code})`,
-                      },
-                      {
-                        title: 'Vị trí',
-                        dataIndex: 'location_name',
-                        render: (value, record) => `${value} (${record.location_code})`,
-                      },
-                      {
-                        title: 'Sản phẩm',
-                        dataIndex: 'product_name',
-                        render: (value, record) => `${value} (${record.product_code})`,
-                      },
-                      {
-                        title: 'Tồn hiện tại',
-                        dataIndex: 'quantity',
-                        render: formatNumber,
-                      },
-                      {
-                        title: 'Cập nhật gần nhất',
-                        dataIndex: 'updated_at',
-                        render: formatDateTime,
-                      },
-                    ]}
-                    locale={{
-                      emptyText: (
-                        <Empty
-                          image={Empty.PRESENTED_IMAGE_SIMPLE}
-                          description="Chưa tìm thấy dòng tồn kho nào khớp với phiếu đang theo dõi."
-                        />
-                      ),
-                    }}
-                  />
-                </Space>
-              </Card>
+              <>
+                <Card className="page-card" styles={{ body: { padding: 18 } }}>
+                  <Space orientation="vertical" size={12} style={{ width: '100%' }}>
+                    <Typography.Title level={5} style={{ margin: 0 }}>
+                      Tồn kho hiện tại tại các vị trí nguồn và đích
+                    </Typography.Title>
+                    <Table
+                      rowKey="id"
+                      size="small"
+                      pagination={false}
+                      dataSource={selectedInventoryRows}
+                      columns={[
+                        {
+                          title: 'Kho',
+                          dataIndex: 'warehouse_name',
+                          render: (value, record) => `${value} (${record.warehouse_code})`,
+                        },
+                        {
+                          title: 'Vị trí',
+                          dataIndex: 'location_name',
+                          render: (value, record) => `${value} (${record.location_code})`,
+                        },
+                        {
+                          title: 'Sản phẩm',
+                          dataIndex: 'product_name',
+                          render: (value, record) => `${value} (${record.product_code})`,
+                        },
+                        {
+                          title: 'Tồn hiện tại',
+                          dataIndex: 'quantity',
+                          render: formatNumber,
+                        },
+                        {
+                          title: 'Cập nhật gần nhất',
+                          dataIndex: 'updated_at',
+                          render: formatDateTime,
+                        },
+                      ]}
+                      locale={{
+                        emptyText: (
+                          <Empty
+                            image={Empty.PRESENTED_IMAGE_SIMPLE}
+                            description="Chưa tìm thấy dòng tồn kho nào khớp với phiếu đang theo dõi."
+                          />
+                        ),
+                      }}
+                    />
+                  </Space>
+                </Card>
+
+                <Card className="page-card" styles={{ body: { padding: 18 } }}>
+                  <Space orientation="vertical" size={12} style={{ width: '100%' }}>
+                    <Typography.Title level={5} style={{ margin: 0 }}>
+                      Lịch sử điều chuyển đã ghi nhận
+                    </Typography.Title>
+                    <Typography.Text type="secondary">
+                      Khi phiếu được xác nhận, hệ thống sẽ sinh 2 movement để truy vết: một dòng giảm ở kho nguồn và một dòng tăng ở kho đích.
+                    </Typography.Text>
+                    <Table
+                      rowKey="id"
+                      size="small"
+                      loading={movementLoading}
+                      pagination={false}
+                      dataSource={transferMovements}
+                      columns={movementColumns}
+                      scroll={{ x: 1180 }}
+                      locale={{
+                        emptyText: (
+                          <Empty
+                            image={Empty.PRESENTED_IMAGE_SIMPLE}
+                            description={selectedTransfer.status === 'confirmed'
+                              ? 'Phiếu đã xác nhận nhưng chưa có movement nào khớp để hiển thị.'
+                              : 'Phiếu chỉ sinh movement sau khi được xác nhận.'}
+                          />
+                        ),
+                      }}
+                    />
+                  </Space>
+                </Card>
+              </>
             ) : null}
           </Space>
         )}
