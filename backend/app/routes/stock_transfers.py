@@ -131,6 +131,26 @@ def audit_stock_transfer_change(action, actor_user_id, transfer):
     )
 
 
+def claim_draft_stock_transfer_for_mutation(transfer_id, lock_status, error_message):
+    claimed_rows = (
+        db.session.query(StockTransfer)
+        .filter(
+            StockTransfer.id == transfer_id,
+            StockTransfer.status == "draft",
+        )
+        .update({"status": lock_status}, synchronize_session=False)
+    )
+    if claimed_rows == 0:
+        transfer = db.session.get(StockTransfer, transfer_id)
+        if not transfer:
+            abort(404)
+        abort(400, description=error_message)
+
+    transfer = db.session.get(StockTransfer, transfer_id)
+    transfer.status = "draft"
+    return transfer
+
+
 @stock_transfers_bp.get("/stock-transfers")
 @jwt_required()
 @permission_required("stock_transfers.view")
@@ -217,20 +237,25 @@ def get_stock_transfer(transfer_id):
 @permission_required("stock_transfers.manage")
 def update_stock_transfer(transfer_id):
     current_user = get_current_user()
-    transfer = db.get_or_404(StockTransfer, transfer_id)
-    if transfer.status != "draft":
-        abort(400, description="Chỉ phiếu điều chuyển ở trạng thái nháp mới có thể chỉnh sửa.")
+    try:
+        transfer = claim_draft_stock_transfer_for_mutation(
+            transfer_id,
+            "editing",
+            "Chỉ phiếu điều chuyển ở trạng thái nháp mới có thể chỉnh sửa.",
+        )
+        payload = StockTransferSchema().load(request.get_json() or {})
+        payload = normalize_payload(payload)
+        validate_transfer_payload(payload)
 
-    payload = StockTransferSchema().load(request.get_json() or {})
-    payload = normalize_payload(payload)
-    validate_transfer_payload(payload)
-
-    transfer.source_warehouse_id = payload["source_warehouse_id"]
-    transfer.target_warehouse_id = payload["target_warehouse_id"]
-    transfer.note = payload.get("note")
-    sync_transfer_details(transfer, payload["items"])
-    audit_stock_transfer_change("stock_transfers.updated", current_user.id, transfer)
-    db.session.commit()
+        transfer.source_warehouse_id = payload["source_warehouse_id"]
+        transfer.target_warehouse_id = payload["target_warehouse_id"]
+        transfer.note = payload.get("note")
+        sync_transfer_details(transfer, payload["items"])
+        audit_stock_transfer_change("stock_transfers.updated", current_user.id, transfer)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return jsonify({"item": serialize_stock_transfer(transfer)})
 
 
@@ -239,14 +264,19 @@ def update_stock_transfer(transfer_id):
 @permission_required("stock_transfers.manage")
 def cancel_stock_transfer_route(transfer_id):
     current_user = get_current_user()
-    transfer = db.get_or_404(StockTransfer, transfer_id)
-    if transfer.status != "draft":
-        abort(400, description="Chỉ phiếu điều chuyển ở trạng thái nháp mới có thể hủy.")
-
-    # Draft transfers have not touched inventory yet, so cancel only changes workflow state.
-    transfer.status = "cancelled"
-    audit_stock_transfer_change("stock_transfers.cancelled", current_user.id, transfer)
-    db.session.commit()
+    try:
+        transfer = claim_draft_stock_transfer_for_mutation(
+            transfer_id,
+            "cancelling",
+            "Chỉ phiếu điều chuyển ở trạng thái nháp mới có thể hủy.",
+        )
+        # Draft transfers have not touched inventory yet, so cancel only changes workflow state.
+        transfer.status = "cancelled"
+        audit_stock_transfer_change("stock_transfers.cancelled", current_user.id, transfer)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return jsonify({"item": serialize_stock_transfer(transfer)})
 
 
@@ -255,14 +285,20 @@ def cancel_stock_transfer_route(transfer_id):
 @permission_required("stock_transfers.manage")
 def confirm_stock_transfer_route(transfer_id):
     current_user = get_current_user()
-    transfer = db.get_or_404(StockTransfer, transfer_id)
-
     try:
+        transfer = claim_draft_stock_transfer_for_mutation(
+            transfer_id,
+            "confirming",
+            "Chỉ phiếu điều chuyển ở trạng thái nháp mới có thể xác nhận.",
+        )
         confirm_stock_transfer(transfer, current_user.id)
         audit_stock_transfer_change("stock_transfers.confirmed", current_user.id, transfer)
         db.session.commit()
     except ValueError as exc:
         db.session.rollback()
         abort(400, description=str(exc))
+    except Exception:
+        db.session.rollback()
+        raise
 
     return jsonify({"item": serialize_stock_transfer(transfer)})

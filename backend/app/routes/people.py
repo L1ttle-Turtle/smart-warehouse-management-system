@@ -7,6 +7,7 @@ from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 
 from ..audit import log_audit_event
+from ..constants import ROLE_DELEGATION_ALLOWED_TARGETS
 from ..extensions import db
 from ..models import Employee, Role, User
 from ..permissions import get_current_user, permission_required
@@ -128,7 +129,38 @@ def get_pagination_params():
     return page, page_size
 
 
-def apply_user_payload(user, payload, is_create=False):
+def get_manageable_role_names_for_user_management(current_user):
+    role_name = current_user.role.role_name if current_user.role else None
+    if role_name == "admin":
+        return None
+    return set(ROLE_DELEGATION_ALLOWED_TARGETS.get(role_name, []))
+
+
+def ensure_assignable_role(current_user, role):
+    manageable_role_names = get_manageable_role_names_for_user_management(current_user)
+    if manageable_role_names is None:
+        return
+    if role.role_name not in manageable_role_names:
+        abort(
+            403,
+            description="Bạn không thể gán hoặc tạo tài khoản với vai trò cao hơn quyền gốc của mình.",
+        )
+
+
+def ensure_manageable_user_for_management(current_user, user):
+    manageable_role_names = get_manageable_role_names_for_user_management(current_user)
+    if manageable_role_names is None:
+        return
+
+    target_role_name = user.role.role_name if user.role else None
+    if target_role_name not in manageable_role_names:
+        abort(
+            403,
+            description="Bạn chỉ được quản lý tài khoản thuộc vai trò cấp dưới được phép.",
+        )
+
+
+def apply_user_payload(user, payload, is_create=False, current_user=None):
     if "username" in payload and payload["username"] is not None:
         user.username = payload["username"].strip()
     if "full_name" in payload and payload["full_name"] is not None:
@@ -141,6 +173,8 @@ def apply_user_payload(user, payload, is_create=False):
         role = db.session.get(Role, payload["role_id"])
         if not role:
             abort(400, description="Vai trò được chọn không tồn tại.")
+        if current_user:
+            ensure_assignable_role(current_user, role)
         user.role_id = role.id
     if "status" in payload and payload["status"] is not None:
         user.status = payload["status"]
@@ -267,7 +301,7 @@ def create_user():
     current_user = get_current_user()
     payload = UserCreateSchema().load(request.get_json() or {})
     user = User()
-    apply_user_payload(user, payload, True)
+    apply_user_payload(user, payload, True, current_user=current_user)
     validate_user_uniqueness(user)
     db.session.add(user)
     try:
@@ -302,8 +336,9 @@ def get_user(user_id):
 def update_user(user_id):
     current_user = get_current_user()
     user = db.get_or_404(User, user_id)
+    ensure_manageable_user_for_management(current_user, user)
     payload = UserUpdateSchema().load(request.get_json() or {})
-    apply_user_payload(user, payload, False)
+    apply_user_payload(user, payload, False, current_user=current_user)
     validate_user_uniqueness(user)
     try:
         log_audit_event(
@@ -330,6 +365,7 @@ def delete_user(user_id):
     user = db.get_or_404(User, user_id)
     if user.id == current_user.id:
         abort(400, description="Không thể xóa chính tài khoản đang đăng nhập.")
+    ensure_manageable_user_for_management(current_user, user)
     if user.employee:
         abort(400, description="Tài khoản này đang liên kết với hồ sơ nhân sự và chưa thể xóa.")
     if user.delegations_granted or user.delegations_received:

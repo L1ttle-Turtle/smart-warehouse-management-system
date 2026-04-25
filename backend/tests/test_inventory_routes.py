@@ -1,4 +1,4 @@
-from app.models import Product, Warehouse, WarehouseLocation
+from app.models import AuditLog, Inventory, InventoryMovement, Product, Warehouse, WarehouseLocation
 
 
 def get_seed_transfer_context(app):
@@ -88,9 +88,109 @@ def test_inventory_movements_can_be_filtered_by_stock_transfer_reference(client,
     assert {item["movement_type"] for item in payload["items"]} == {"transfer_out", "transfer_in"}
 
 
+def test_inventory_movements_rejects_invalid_reference_id(client, auth_headers):
+    response = client.get(
+        "/inventory/movements?reference_type=stock_transfer&reference_id=abc",
+        headers=auth_headers("manager", "Manager@123"),
+    )
+
+    assert response.status_code == 400
+    assert "reference_id" in response.get_json()["message"]
+
+
 def test_inventory_routes_require_inventory_view_permission(client, auth_headers):
     staff_response = client.get("/inventory", headers=auth_headers("staff", "Staff@123"))
     accountant_response = client.get("/inventory", headers=auth_headers("accountant", "Accountant@123"))
 
     assert staff_response.status_code == 200
     assert accountant_response.status_code == 403
+
+
+def test_inventory_adjustment_updates_stock_and_creates_movement(client, auth_headers, app):
+    context = get_seed_transfer_context(app)
+
+    response = client.post(
+        "/inventory/adjustments",
+        headers=auth_headers("admin", "Admin@123"),
+        json={
+            "warehouse_id": context["source_warehouse_id"],
+            "location_id": context["source_location_id"],
+            "product_id": context["product_id"],
+            "actual_quantity": 20,
+            "note": "Dieu chinh sau kiem ke demo",
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.get_json()
+    assert payload["inventory"]["quantity"] == 20
+    assert payload["movement"]["movement_type"] == "adjustment"
+    assert payload["movement"]["reference_type"] == "inventory_adjustment"
+    assert payload["movement"]["quantity_before"] == 24
+    assert payload["movement"]["quantity_change"] == -4
+    assert payload["movement"]["quantity_after"] == 20
+
+    with app.app_context():
+        inventory_row = Inventory.query.filter_by(
+            warehouse_id=context["source_warehouse_id"],
+            location_id=context["source_location_id"],
+            product_id=context["product_id"],
+        ).first()
+        assert inventory_row is not None
+        assert inventory_row.quantity == 20
+
+        movement = InventoryMovement.query.filter_by(reference_type="inventory_adjustment").first()
+        assert movement is not None
+        assert movement.quantity_after == 20
+
+        audit_log = AuditLog.query.filter_by(action="inventory.adjusted").first()
+        assert audit_log is not None
+
+
+def test_inventory_adjustment_rejects_invalid_location_for_selected_warehouse(client, auth_headers, app):
+    context = get_seed_transfer_context(app)
+
+    response = client.post(
+        "/inventory/adjustments",
+        headers=auth_headers("manager", "Manager@123"),
+        json={
+            "warehouse_id": context["source_warehouse_id"],
+            "location_id": context["target_location_id"],
+            "product_id": context["product_id"],
+            "actual_quantity": 18,
+            "note": "Sai vi tri kho",
+        },
+    )
+
+    assert response.status_code == 400
+
+
+def test_inventory_adjustment_requires_inventory_manage_permission(client, auth_headers, app):
+    context = get_seed_transfer_context(app)
+    payload = {
+        "warehouse_id": context["source_warehouse_id"],
+        "location_id": context["source_location_id"],
+        "product_id": context["product_id"],
+        "actual_quantity": 21,
+        "note": "Kiem tra phan quyen",
+    }
+
+    staff_response = client.post(
+        "/inventory/adjustments",
+        headers=auth_headers("staff", "Staff@123"),
+        json=payload,
+    )
+    accountant_response = client.post(
+        "/inventory/adjustments",
+        headers=auth_headers("accountant", "Accountant@123"),
+        json=payload,
+    )
+    shipper_response = client.post(
+        "/inventory/adjustments",
+        headers=auth_headers("shipper", "Shipper@123"),
+        json=payload,
+    )
+
+    assert staff_response.status_code == 201
+    assert accountant_response.status_code == 403
+    assert shipper_response.status_code == 403

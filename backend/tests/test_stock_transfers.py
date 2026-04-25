@@ -257,6 +257,61 @@ def test_draft_stock_transfer_can_be_cancelled_without_changing_inventory(client
         assert "stock_transfers.cancelled" in actions
 
 
+def test_invalid_update_rolls_back_temporary_transfer_lock(client, auth_headers, app):
+    context = get_seed_transfer_context(app)
+
+    create_response = client.post(
+        "/stock-transfers",
+        headers=auth_headers("staff", "Staff@123"),
+        json={
+            "source_warehouse_id": context["source_warehouse_id"],
+            "target_warehouse_id": context["target_warehouse_id"],
+            "note": "Phieu dieu chuyen se loi validate",
+            "items": [
+                {
+                    "product_id": context["product_id"],
+                    "source_location_id": context["source_location_id"],
+                    "target_location_id": context["target_location_id"],
+                    "quantity": 2,
+                },
+            ],
+        },
+    )
+    assert create_response.status_code == 201
+    transfer_id = create_response.get_json()["item"]["id"]
+
+    invalid_update_response = client.put(
+        f"/stock-transfers/{transfer_id}",
+        headers=auth_headers("staff", "Staff@123"),
+        json={
+            "source_warehouse_id": context["source_warehouse_id"],
+            "target_warehouse_id": context["source_warehouse_id"],
+            "note": "Payload khong hop le",
+            "items": [
+                {
+                    "product_id": context["product_id"],
+                    "source_location_id": context["source_location_id"],
+                    "target_location_id": context["source_location_id"],
+                    "quantity": 2,
+                },
+            ],
+        },
+    )
+
+    assert invalid_update_response.status_code == 400
+
+    with app.app_context():
+        transfer = StockTransfer.query.filter_by(id=transfer_id).first()
+        movement = InventoryMovement.query.filter_by(
+            reference_type="stock_transfer",
+            reference_id=transfer_id,
+        ).first()
+
+        assert transfer.status == "draft"
+        assert transfer.note == "Phieu dieu chuyen se loi validate"
+        assert movement is None
+
+
 def test_stock_transfer_permission_matrix(client, auth_headers):
     manager_response = client.get("/stock-transfers", headers=auth_headers("manager", "Manager@123"))
     staff_response = client.get("/stock-transfers", headers=auth_headers("staff", "Staff@123"))

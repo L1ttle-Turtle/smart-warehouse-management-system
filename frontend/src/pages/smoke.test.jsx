@@ -29,6 +29,7 @@ const adminPermissions = [
   'users.manage',
   'employees.view',
   'employees.manage',
+  'inventory.manage',
   'inventory.view',
   'export_receipts.view',
   'export_receipts.manage',
@@ -58,6 +59,7 @@ const managerPermissions = [
   'delegations.manage',
   'employees.view',
   'employees.manage',
+  'inventory.manage',
   'inventory.view',
   'export_receipts.view',
   'export_receipts.manage',
@@ -89,6 +91,7 @@ const accountantPermissions = [
 
 const staffPermissions = [
   'dashboard.view',
+  'inventory.manage',
   'inventory.view',
   'export_receipts.view',
   'export_receipts.manage',
@@ -1114,6 +1117,29 @@ test('staff can render inventory page', async () => {
   renderWithProviders(<InventoryPage />, '/inventory');
 
   await waitFor(() => expect(screen.getAllByText(/Kho Trung Tam/i).length).toBeGreaterThan(0));
+});
+
+test('inventory page shows stock adjustment tab for admin', async () => {
+  renderWithProviders(<InventoryPage />, '/inventory');
+
+  await waitFor(() => expect(screen.getAllByText(/Kho Trung Tam/i).length).toBeGreaterThan(0));
+  expect(screen.getByRole('tab', { name: /Điều chỉnh tồn kho/i })).toBeInTheDocument();
+});
+
+test('inventory page shows stock adjustment tab for staff', async () => {
+  authState = buildAuthState({
+    permissions: staffPermissions,
+    user: {
+      id: 3,
+      full_name: 'Staff User',
+      role: 'staff',
+    },
+  });
+
+  renderWithProviders(<InventoryPage />, '/inventory');
+
+  await waitFor(() => expect(screen.getAllByText(/Kho Trung Tam/i).length).toBeGreaterThan(0));
+  expect(screen.getByRole('tab', { name: /Điều chỉnh tồn kho/i })).toBeInTheDocument();
 });
 
 test('redirects unauthenticated users to login', async () => {

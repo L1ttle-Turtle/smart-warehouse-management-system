@@ -1,5 +1,24 @@
 from app.extensions import db
-from app.models import Employee, Role, User
+from app.models import Employee, Permission, Role, User
+
+
+def grant_users_manage_to_user(client, auth_headers, app, username):
+    with app.app_context():
+        target_user = User.query.filter_by(username=username).first()
+        users_manage = Permission.query.filter_by(permission_name="users.manage").first()
+
+    response = client.post(
+        "/delegations",
+        headers=auth_headers("admin", "Admin@123"),
+        json={
+            "target_user_id": target_user.id,
+            "permission_id": users_manage.id,
+            "note": "Ủy quyền quản lý tài khoản để kiểm tra giới hạn vai trò.",
+        },
+    )
+
+    assert response.status_code == 201
+    return response.get_json()["item"]
 
 
 def test_admin_can_list_users(client, auth_headers):
@@ -108,6 +127,92 @@ def test_manager_cannot_create_user(client, auth_headers, app):
     )
 
     assert response.status_code == 403
+
+
+def test_delegated_manager_cannot_create_user_with_higher_role(client, auth_headers, app):
+    grant_users_manage_to_user(client, auth_headers, app, "manager")
+    with app.app_context():
+        admin_role = Role.query.filter_by(role_name="admin").first()
+
+    response = client.post(
+        "/users",
+        headers=auth_headers("manager", "Manager@123"),
+        json={
+            "username": "manager_escalation_try",
+            "full_name": "Manager Escalation Try",
+            "email": "manager-escalation@example.com",
+            "role_id": admin_role.id,
+            "status": "active",
+            "password": "AdminEscalation@123",
+        },
+    )
+
+    assert response.status_code == 403
+    assert "cao hơn quyền gốc" in response.get_json()["message"]
+
+
+def test_delegated_manager_can_create_user_with_lower_role(client, auth_headers, app):
+    grant_users_manage_to_user(client, auth_headers, app, "manager")
+    with app.app_context():
+        staff_role = Role.query.filter_by(role_name="staff").first()
+
+    response = client.post(
+        "/users",
+        headers=auth_headers("manager", "Manager@123"),
+        json={
+            "username": "staff_created_by_manager",
+            "full_name": "Staff Created By Manager",
+            "email": "staff-created-by-manager@example.com",
+            "role_id": staff_role.id,
+            "status": "active",
+            "password": "StaffCreated@123",
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.get_json()["item"]["role"] == "staff"
+
+
+def test_delegated_manager_cannot_promote_lower_role_user_to_admin(client, auth_headers, app):
+    grant_users_manage_to_user(client, auth_headers, app, "manager")
+    with app.app_context():
+        admin_role = Role.query.filter_by(role_name="admin").first()
+        staff_user = User.query.filter_by(username="staff").first()
+        staff_user_id = staff_user.id
+
+    response = client.put(
+        f"/users/{staff_user_id}",
+        headers=auth_headers("manager", "Manager@123"),
+        json={"role_id": admin_role.id},
+    )
+
+    assert response.status_code == 403
+    assert "cao hơn quyền gốc" in response.get_json()["message"]
+
+    with app.app_context():
+        staff_user = db.session.get(User, staff_user_id)
+        assert staff_user.role.role_name == "staff"
+
+
+def test_delegated_manager_cannot_edit_higher_role_account(client, auth_headers, app):
+    grant_users_manage_to_user(client, auth_headers, app, "manager")
+    with app.app_context():
+        admin_user = User.query.filter_by(username="admin").first()
+        admin_user_id = admin_user.id
+        previous_full_name = admin_user.full_name
+
+    response = client.put(
+        f"/users/{admin_user_id}",
+        headers=auth_headers("manager", "Manager@123"),
+        json={"full_name": "Admin Changed By Manager"},
+    )
+
+    assert response.status_code == 403
+    assert "vai trò cấp dưới" in response.get_json()["message"]
+
+    with app.app_context():
+        admin_user = db.session.get(User, admin_user_id)
+        assert admin_user.full_name == previous_full_name
 
 
 def test_manager_can_create_employee_with_unlinked_user(client, auth_headers, app):

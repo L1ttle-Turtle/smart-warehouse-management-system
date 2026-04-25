@@ -178,6 +178,14 @@ class InventoryMovementSchema(Schema):
     note = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
 
 
+class InventoryAdjustmentSchema(Schema):
+    warehouse_id = fields.Integer(required=True)
+    location_id = fields.Integer(required=True)
+    product_id = fields.Integer(required=True)
+    actual_quantity = fields.Float(required=True, validate=validate.Range(min=0))
+    note = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+
+
 class ImportReceiptItemSchema(Schema):
     product_id = fields.Integer(required=True)
     location_id = fields.Integer(required=True)

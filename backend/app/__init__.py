@@ -1,18 +1,31 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 from flask import Flask, jsonify
 from flask_migrate import upgrade
 from marshmallow import ValidationError
+from dotenv import load_dotenv
 
-from .config import Config, TestConfig
+from .config import Config, TestConfig, get_runtime_config
 from .extensions import bcrypt, cors, db, jwt, migrate, socketio
 from .routes import register_blueprints
 from .seed import seed_all
 
 
+def load_runtime_environment():
+    env_path = os.getenv("WAREHOUSE_ENV_FILE")
+    if env_path:
+        load_dotenv(env_path, override=False)
+        return
+
+    project_env = Path(__file__).resolve().parents[1] / ".env"
+    load_dotenv(project_env, override=False)
+
+
 def create_app(config_object=None):
+    load_runtime_environment()
     app = Flask(__name__)
     config_name = config_object or os.getenv("FLASK_CONFIG", "default")
     if config_name == "test":
@@ -21,6 +34,7 @@ def create_app(config_object=None):
         app.config.from_object(config_name)
     else:
         app.config.from_object(Config)
+        app.config.update(get_runtime_config())
 
     db.init_app(app)
     migrate.init_app(app, db)
