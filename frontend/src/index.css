@@ -314,6 +314,14 @@ body {
   background: rgba(241, 211, 160, 0.35);
 }
 
+.inventory-row-low-stock td {
+  background: rgba(255, 244, 214, 0.72) !important;
+}
+
+.inventory-row-out-of-stock td {
+  background: rgba(255, 226, 223, 0.86) !important;
+}
+
 @media (max-width: 1080px) {
   .auth-shell {
     grid-template-columns: 1fr;

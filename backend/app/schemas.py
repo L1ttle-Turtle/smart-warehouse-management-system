@@ -186,6 +186,34 @@ class InventoryAdjustmentSchema(Schema):
     note = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
 
 
+class StocktakeDetailItemSchema(Schema):
+    product_id = fields.Integer(required=True)
+    location_id = fields.Integer(required=True)
+    actual_quantity = fields.Float(required=True, validate=validate.Range(min=0))
+    note = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+
+
+class StocktakeSchema(Schema):
+    warehouse_id = fields.Integer(required=True)
+    note = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+    details = fields.List(
+        fields.Nested(StocktakeDetailItemSchema),
+        required=True,
+        validate=validate.Length(min=1),
+    )
+
+    @validates_schema
+    def validate_duplicate_details(self, data, **kwargs):
+        seen_pairs = set()
+        for index, detail in enumerate(data.get("details", []), start=1):
+            pair = (detail["product_id"], detail["location_id"])
+            if pair in seen_pairs:
+                raise ValidationError(
+                    {"details": [f"Dòng {index} bị trùng sản phẩm và vị trí kho trong cùng phiếu kiểm kê."]}
+                )
+            seen_pairs.add(pair)
+
+
 class ImportReceiptItemSchema(Schema):
     product_id = fields.Integer(required=True)
     location_id = fields.Integer(required=True)
@@ -217,6 +245,77 @@ class ExportReceiptSchema(Schema):
         fields.Nested(ExportReceiptItemSchema),
         required=True,
         validate=validate.Length(min=1),
+    )
+
+
+class ShipmentCreateSchema(Schema):
+    export_receipt_id = fields.Integer(required=True)
+    shipper_id = fields.Integer(required=True)
+    note = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+
+
+class ShipmentStatusSchema(Schema):
+    status = fields.String(
+        required=True,
+        validate=validate.OneOf(["assigned", "in_transit", "delivered", "cancelled"]),
+    )
+    note = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+
+
+class InvoicePricingItemSchema(Schema):
+    export_receipt_detail_id = fields.Integer(required=True)
+    unit_price = fields.Float(required=True, validate=validate.Range(min=0))
+
+
+class InvoiceCreateSchema(Schema):
+    export_receipt_id = fields.Integer(required=True)
+    bank_account_id = fields.Integer(load_default=None, allow_none=True)
+    note = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+    items = fields.List(
+        fields.Nested(InvoicePricingItemSchema),
+        required=True,
+        validate=validate.Length(min=1),
+    )
+
+
+class PaymentCreateSchema(Schema):
+    invoice_id = fields.Integer(required=True)
+    bank_account_id = fields.Integer(load_default=None, allow_none=True)
+    amount = fields.Float(required=True, validate=validate.Range(min=0.0001))
+    payment_method = fields.String(
+        load_default="cash",
+        validate=validate.OneOf(["cash", "bank_transfer", "other"]),
+    )
+    paid_at = fields.DateTime(load_default=None, allow_none=True)
+    note = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+
+
+class NotificationBroadcastSchema(Schema):
+    title = fields.String(required=True, validate=validate.Length(min=1, max=160))
+    content = fields.String(required=True, validate=validate.Length(min=1, max=500))
+    type = fields.String(
+        load_default="system",
+        validate=validate.OneOf(["system", "task", "inventory", "shipment", "payment"]),
+    )
+    receiver_ids = fields.List(fields.Integer(), load_default=list)
+    role_names = fields.List(fields.String(validate=validate.Length(min=1, max=50)), load_default=list)
+
+
+class TaskCreateSchema(Schema):
+    title = fields.String(required=True, validate=validate.Length(min=1, max=160))
+    description = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=500))
+    assigned_to_id = fields.Integer(required=True)
+    priority = fields.String(
+        load_default="medium",
+        validate=validate.OneOf(["low", "medium", "high"]),
+    )
+    due_at = fields.DateTime(load_default=None, allow_none=True)
+
+
+class TaskStatusSchema(Schema):
+    status = fields.String(
+        required=True,
+        validate=validate.OneOf(["todo", "in_progress", "done", "cancelled"]),
     )
 
 

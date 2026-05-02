@@ -2,7 +2,9 @@ import { Tag } from 'antd';
 
 const COLOR_MAP = {
   active: 'green',
+  assigned: 'gold',
   inactive: 'default',
+  in_transit: 'blue',
   draft: 'gold',
   confirmed: 'green',
   cancelled: 'red',
@@ -15,6 +17,16 @@ const COLOR_MAP = {
   unpaid: 'red',
   partial: 'orange',
   paid: 'green',
+  todo: 'gold',
+  done: 'green',
+  low: 'default',
+  medium: 'blue',
+  high: 'red',
+  system: 'blue',
+  task: 'purple',
+  inventory: 'cyan',
+  shipment: 'geekblue',
+  payment: 'green',
 };
 
 function prettify(value) {

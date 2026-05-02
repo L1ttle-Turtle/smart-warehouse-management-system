@@ -9,10 +9,17 @@ from .models import (
     ExportReceiptDetail,
     Inventory,
     InventoryMovement,
+    Invoice,
+    InvoiceDetail,
     ImportReceipt,
     ImportReceiptDetail,
+    InternalTask,
+    Payment,
     Product,
     Role,
+    Shipment,
+    Stocktake,
+    StocktakeDetail,
     StockTransfer,
     StockTransferDetail,
     Supplier,
@@ -20,6 +27,7 @@ from .models import (
     UserPermissionDelegation,
     Warehouse,
     WarehouseLocation,
+    Notification,
 )
 
 
@@ -228,8 +236,37 @@ def serialize_product(product: Product):
     }
 
 
-def serialize_inventory_row(inventory: Inventory):
+def get_inventory_stock_status(quantity, min_stock):
+    quantity = float(quantity or 0)
+    min_stock = float(min_stock or 0)
+    shortage_quantity = max(min_stock - quantity, 0)
+
+    if quantity <= 0:
+        return {
+            "stock_status": "out_of_stock",
+            "stock_status_label": "Hết hàng",
+            "is_low_stock": True,
+            "shortage_quantity": shortage_quantity,
+        }
+
+    if quantity <= min_stock:
+        return {
+            "stock_status": "low_stock",
+            "stock_status_label": "Tồn thấp",
+            "is_low_stock": True,
+            "shortage_quantity": shortage_quantity,
+        }
+
     return {
+        "stock_status": "in_stock",
+        "stock_status_label": "Đủ hàng",
+        "is_low_stock": False,
+        "shortage_quantity": 0,
+    }
+
+
+def serialize_inventory_row(inventory: Inventory):
+    payload = {
         "id": inventory.id,
         "warehouse_id": inventory.warehouse_id,
         "warehouse_code": inventory.warehouse.warehouse_code if inventory.warehouse else None,
@@ -240,18 +277,34 @@ def serialize_inventory_row(inventory: Inventory):
         "product_id": inventory.product_id,
         "product_code": inventory.product.product_code if inventory.product else None,
         "product_name": inventory.product.product_name if inventory.product else None,
+        "category_id": inventory.product.category_id if inventory.product else None,
+        "category_name": (
+            inventory.product.category.category_name
+            if inventory.product and inventory.product.category
+            else None
+        ),
+        "min_stock": inventory.product.min_stock if inventory.product else 0,
         "quantity": inventory.quantity,
         "updated_at": inventory.updated_at.isoformat() if inventory.updated_at else None,
         "created_at": inventory.created_at.isoformat() if inventory.created_at else None,
     }
+    payload.update(
+        get_inventory_stock_status(
+            inventory.quantity,
+            inventory.product.min_stock if inventory.product else 0,
+        )
+    )
+    return payload
 
 
 def serialize_inventory_movement(movement: InventoryMovement):
     return {
         "id": movement.id,
         "warehouse_id": movement.warehouse_id,
+        "warehouse_code": movement.warehouse.warehouse_code if movement.warehouse else None,
         "warehouse_name": movement.warehouse.warehouse_name if movement.warehouse else None,
         "location_id": movement.location_id,
+        "location_code": movement.location.location_code if movement.location else None,
         "location_name": movement.location.location_name if movement.location else None,
         "product_id": movement.product_id,
         "product_code": movement.product.product_code if movement.product else None,
@@ -352,6 +405,167 @@ def serialize_export_receipt(receipt: ExportReceipt):
     }
 
 
+def serialize_shipment(shipment: Shipment):
+    receipt = shipment.export_receipt
+    total_quantity = sum(detail.quantity for detail in receipt.details) if receipt else 0
+    return {
+        "id": shipment.id,
+        "shipment_code": shipment.shipment_code,
+        "export_receipt_id": shipment.export_receipt_id,
+        "export_receipt_code": receipt.receipt_code if receipt else None,
+        "warehouse_id": receipt.warehouse_id if receipt else None,
+        "warehouse_code": receipt.warehouse.warehouse_code if receipt and receipt.warehouse else None,
+        "warehouse_name": receipt.warehouse.warehouse_name if receipt and receipt.warehouse else None,
+        "customer_id": receipt.customer_id if receipt else None,
+        "customer_code": receipt.customer.customer_code if receipt and receipt.customer else None,
+        "customer_name": receipt.customer.customer_name if receipt and receipt.customer else None,
+        "shipper_id": shipment.shipper_id,
+        "shipper_name": shipment.shipper.full_name if shipment.shipper else None,
+        "created_by": shipment.created_by,
+        "created_by_name": shipment.creator.full_name if shipment.creator else None,
+        "status": shipment.status,
+        "note": shipment.note,
+        "detail_count": len(receipt.details) if receipt else 0,
+        "total_quantity": total_quantity,
+        "assigned_at": shipment.assigned_at.isoformat() if shipment.assigned_at else None,
+        "in_transit_at": shipment.in_transit_at.isoformat() if shipment.in_transit_at else None,
+        "delivered_at": shipment.delivered_at.isoformat() if shipment.delivered_at else None,
+        "cancelled_at": shipment.cancelled_at.isoformat() if shipment.cancelled_at else None,
+        "created_at": shipment.created_at.isoformat() if shipment.created_at else None,
+        "updated_at": shipment.updated_at.isoformat() if shipment.updated_at else None,
+        "details": [serialize_export_receipt_detail(detail) for detail in receipt.details] if receipt else [],
+    }
+
+
+def serialize_invoice_detail(detail: InvoiceDetail):
+    return {
+        "id": detail.id,
+        "export_receipt_detail_id": detail.export_receipt_detail_id,
+        "product_id": detail.product_id,
+        "product_code": detail.product.product_code if detail.product else None,
+        "product_name": detail.product.product_name if detail.product else None,
+        "location_id": detail.location_id,
+        "location_code": detail.location.location_code if detail.location else None,
+        "location_name": detail.location.location_name if detail.location else None,
+        "quantity": detail.quantity,
+        "unit_price": detail.unit_price,
+        "line_total": detail.line_total,
+        "created_at": detail.created_at.isoformat() if detail.created_at else None,
+        "updated_at": detail.updated_at.isoformat() if detail.updated_at else None,
+    }
+
+
+def serialize_payment(payment: Payment):
+    return {
+        "id": payment.id,
+        "payment_code": payment.payment_code,
+        "invoice_id": payment.invoice_id,
+        "invoice_code": payment.invoice.invoice_code if payment.invoice else None,
+        "invoice_status": payment.invoice.status if payment.invoice else None,
+        "bank_account_id": payment.bank_account_id,
+        "bank_name": payment.bank_account.bank_name if payment.bank_account else None,
+        "bank_account_number": (
+            payment.bank_account.account_number if payment.bank_account else None
+        ),
+        "created_by": payment.created_by,
+        "created_by_name": payment.creator.full_name if payment.creator else None,
+        "amount": payment.amount,
+        "payment_method": payment.payment_method,
+        "paid_at": payment.paid_at.isoformat() if payment.paid_at else None,
+        "note": payment.note,
+        "created_at": payment.created_at.isoformat() if payment.created_at else None,
+        "updated_at": payment.updated_at.isoformat() if payment.updated_at else None,
+    }
+
+
+def serialize_notification(notification: Notification):
+    return {
+        "id": notification.id,
+        "sender_id": notification.sender_id,
+        "sender_name": notification.sender.full_name if notification.sender else "System",
+        "receiver_id": notification.receiver_id,
+        "receiver_name": notification.receiver.full_name if notification.receiver else None,
+        "title": notification.title,
+        "content": notification.content,
+        "type": notification.type,
+        "is_read": notification.is_read,
+        "read_at": notification.read_at.isoformat() if notification.read_at else None,
+        "created_at": notification.created_at.isoformat() if notification.created_at else None,
+        "updated_at": notification.updated_at.isoformat() if notification.updated_at else None,
+    }
+
+
+def serialize_task(task: InternalTask):
+    return {
+        "id": task.id,
+        "task_code": task.task_code,
+        "title": task.title,
+        "description": task.description,
+        "assigned_to_id": task.assigned_to_id,
+        "assigned_to_name": task.assignee.full_name if task.assignee else None,
+        "assigned_to_role": task.assignee.role.role_name if task.assignee and task.assignee.role else None,
+        "created_by": task.created_by,
+        "created_by_name": task.creator.full_name if task.creator else None,
+        "status": task.status,
+        "priority": task.priority,
+        "due_at": task.due_at.isoformat() if task.due_at else None,
+        "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+        "cancelled_at": task.cancelled_at.isoformat() if task.cancelled_at else None,
+        "created_at": task.created_at.isoformat() if task.created_at else None,
+        "updated_at": task.updated_at.isoformat() if task.updated_at else None,
+    }
+
+
+def serialize_invoice(invoice: Invoice):
+    total_quantity = sum(detail.quantity for detail in invoice.details)
+    paid_amount = sum(float(payment.amount or 0) for payment in invoice.payments)
+    remaining_amount = max(float(invoice.total_amount or 0) - paid_amount, 0)
+    return {
+        "id": invoice.id,
+        "invoice_code": invoice.invoice_code,
+        "export_receipt_id": invoice.export_receipt_id,
+        "export_receipt_code": (
+            invoice.export_receipt.receipt_code if invoice.export_receipt else None
+        ),
+        "warehouse_id": invoice.export_receipt.warehouse_id if invoice.export_receipt else None,
+        "warehouse_code": (
+            invoice.export_receipt.warehouse.warehouse_code
+            if invoice.export_receipt and invoice.export_receipt.warehouse
+            else None
+        ),
+        "warehouse_name": (
+            invoice.export_receipt.warehouse.warehouse_name
+            if invoice.export_receipt and invoice.export_receipt.warehouse
+            else None
+        ),
+        "customer_id": invoice.customer_id,
+        "customer_code": invoice.customer.customer_code if invoice.customer else None,
+        "customer_name": invoice.customer.customer_name if invoice.customer else None,
+        "bank_account_id": invoice.bank_account_id,
+        "bank_name": invoice.bank_account.bank_name if invoice.bank_account else None,
+        "bank_account_number": (
+            invoice.bank_account.account_number if invoice.bank_account else None
+        ),
+        "bank_account_holder": (
+            invoice.bank_account.account_holder if invoice.bank_account else None
+        ),
+        "created_by": invoice.created_by,
+        "created_by_name": invoice.creator.full_name if invoice.creator else None,
+        "status": invoice.status,
+        "note": invoice.note,
+        "detail_count": len(invoice.details),
+        "total_quantity": total_quantity,
+        "total_amount": invoice.total_amount,
+        "paid_amount": paid_amount,
+        "remaining_amount": remaining_amount,
+        "issued_at": invoice.issued_at.isoformat() if invoice.issued_at else None,
+        "created_at": invoice.created_at.isoformat() if invoice.created_at else None,
+        "updated_at": invoice.updated_at.isoformat() if invoice.updated_at else None,
+        "details": [serialize_invoice_detail(detail) for detail in invoice.details],
+        "payments": [serialize_payment(payment) for payment in invoice.payments],
+    }
+
+
 def serialize_stock_transfer_detail(detail: StockTransferDetail):
     return {
         "id": detail.id,
@@ -401,6 +615,52 @@ def serialize_stock_transfer(transfer: StockTransfer):
         "created_at": transfer.created_at.isoformat() if transfer.created_at else None,
         "updated_at": transfer.updated_at.isoformat() if transfer.updated_at else None,
         "details": [serialize_stock_transfer_detail(detail) for detail in transfer.details],
+    }
+
+
+def serialize_stocktake_detail(detail: StocktakeDetail):
+    return {
+        "id": detail.id,
+        "product_id": detail.product_id,
+        "product_code": detail.product.product_code if detail.product else None,
+        "product_name": detail.product.product_name if detail.product else None,
+        "location_id": detail.location_id,
+        "location_code": detail.location.location_code if detail.location else None,
+        "location_name": detail.location.location_name if detail.location else None,
+        "system_quantity": detail.system_quantity,
+        "actual_quantity": detail.actual_quantity,
+        "difference_quantity": detail.difference_quantity,
+        "note": detail.note,
+        "created_at": detail.created_at.isoformat() if detail.created_at else None,
+        "updated_at": detail.updated_at.isoformat() if detail.updated_at else None,
+    }
+
+
+def serialize_stocktake(stocktake: Stocktake):
+    total_difference = sum(detail.difference_quantity for detail in stocktake.details)
+    total_actual_quantity = sum(detail.actual_quantity for detail in stocktake.details)
+    return {
+        "id": stocktake.id,
+        "stocktake_code": stocktake.stocktake_code,
+        "warehouse_id": stocktake.warehouse_id,
+        "warehouse_code": stocktake.warehouse.warehouse_code if stocktake.warehouse else None,
+        "warehouse_name": stocktake.warehouse.warehouse_name if stocktake.warehouse else None,
+        "created_by": stocktake.created_by,
+        "created_by_name": stocktake.creator.full_name if stocktake.creator else None,
+        "confirmed_by": stocktake.confirmed_by,
+        "confirmed_by_name": stocktake.confirmer.full_name if stocktake.confirmer else None,
+        "cancelled_by": stocktake.cancelled_by,
+        "cancelled_by_name": stocktake.canceller.full_name if stocktake.canceller else None,
+        "status": stocktake.status,
+        "note": stocktake.note,
+        "detail_count": len(stocktake.details),
+        "total_actual_quantity": total_actual_quantity,
+        "total_difference_quantity": total_difference,
+        "confirmed_at": stocktake.confirmed_at.isoformat() if stocktake.confirmed_at else None,
+        "cancelled_at": stocktake.cancelled_at.isoformat() if stocktake.cancelled_at else None,
+        "created_at": stocktake.created_at.isoformat() if stocktake.created_at else None,
+        "updated_at": stocktake.updated_at.isoformat() if stocktake.updated_at else None,
+        "details": [serialize_stocktake_detail(detail) for detail in stocktake.details],
     }
 
 

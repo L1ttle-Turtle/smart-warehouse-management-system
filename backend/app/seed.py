@@ -11,11 +11,18 @@ from .models import (
     ExportReceiptDetail,
     Inventory,
     InventoryMovement,
+    Invoice,
+    InvoiceDetail,
     ImportReceipt,
     ImportReceiptDetail,
+    InternalTask,
     Permission,
+    Notification,
     Product,
     Role,
+    Shipment,
+    Stocktake,
+    StocktakeDetail,
     StockTransfer,
     StockTransferDetail,
     Supplier,
@@ -23,6 +30,8 @@ from .models import (
     Warehouse,
     WarehouseLocation,
 )
+from .services.inventory import confirm_export_receipt
+from .utils import utc_now
 
 
 def seed_roles_and_permissions():
@@ -371,6 +380,7 @@ def seed_inventory_demo():
         {"warehouse_code": "WH001", "location_code": "B-01", "product_code": "PRD002", "quantity": 6},
         {"warehouse_code": "WH001", "location_code": "C-01", "product_code": "PRD003", "quantity": 120},
         {"warehouse_code": "WH002", "location_code": "B-01", "product_code": "PRD003", "quantity": 60},
+        {"warehouse_code": "WH001", "location_code": "A-01", "product_code": "PRD004", "quantity": 0},
         {"warehouse_code": "WH002", "location_code": "C-01", "product_code": "PRD004", "quantity": 14},
         {"warehouse_code": "WH001", "location_code": "B-01", "product_code": "PRD005", "quantity": 4},
         {"warehouse_code": "WH002", "location_code": "A-01", "product_code": "PRD006", "quantity": 48},
@@ -698,6 +708,221 @@ def seed_stock_transfer_demo():
     db.session.add(transfer)
 
 
+def seed_stocktake_demo():
+    if Stocktake.query.filter_by(stocktake_code="STK-DEMO-001").first():
+        return
+
+    manager_user = User.query.filter_by(username="manager").first()
+    warehouse = Warehouse.query.filter_by(warehouse_code="WH001").first()
+    if not manager_user or not warehouse:
+        return
+
+    printer = Product.query.filter_by(product_code="PRD002").first()
+    trolley = Product.query.filter_by(product_code="PRD005").first()
+    printer_location = WarehouseLocation.query.filter_by(
+        warehouse_id=warehouse.id,
+        location_code="B-01",
+    ).first()
+    trolley_location = WarehouseLocation.query.filter_by(
+        warehouse_id=warehouse.id,
+        location_code="B-01",
+    ).first()
+    if not printer or not trolley or not printer_location or not trolley_location:
+        return
+
+    printer_inventory = Inventory.query.filter_by(
+        warehouse_id=warehouse.id,
+        product_id=printer.id,
+        location_id=printer_location.id,
+    ).first()
+    trolley_inventory = Inventory.query.filter_by(
+        warehouse_id=warehouse.id,
+        product_id=trolley.id,
+        location_id=trolley_location.id,
+    ).first()
+
+    stocktake = Stocktake(
+        stocktake_code="STK-DEMO-001",
+        warehouse_id=warehouse.id,
+        created_by=manager_user.id,
+        status="draft",
+        note="Kiem ke nhap de demo chenh lech ton kho truoc khi xac nhan.",
+    )
+    stocktake.details = [
+        StocktakeDetail(
+            product_id=printer.id,
+            location_id=printer_location.id,
+            system_quantity=float(printer_inventory.quantity if printer_inventory else 0),
+            actual_quantity=7,
+            difference_quantity=7 - float(printer_inventory.quantity if printer_inventory else 0),
+            note="Thuc te con 7 may in nhiet sau khi kiem dem lai.",
+        ),
+        StocktakeDetail(
+            product_id=trolley.id,
+            location_id=trolley_location.id,
+            system_quantity=float(trolley_inventory.quantity if trolley_inventory else 0),
+            actual_quantity=3,
+            difference_quantity=3 - float(trolley_inventory.quantity if trolley_inventory else 0),
+            note="Mot xe day dang bao tri nen chua tinh vao ton thuc te.",
+        ),
+    ]
+    db.session.add(stocktake)
+
+
+def seed_shipment_demo():
+    if Shipment.query.filter_by(shipment_code="SHP-DEMO-001").first():
+        return
+
+    manager_user = User.query.filter_by(username="manager").first()
+    shipper_user = User.query.filter_by(username="shipper").first()
+    warehouse = Warehouse.query.filter_by(warehouse_code="WH002").first()
+    customer = Customer.query.filter_by(customer_code="CUS002").first()
+    handheld = Product.query.filter_by(product_code="PRD006").first()
+    handheld_location = WarehouseLocation.query.filter_by(
+        warehouse_id=warehouse.id if warehouse else None,
+        location_code="A-01",
+    ).first()
+
+    if not all([manager_user, shipper_user, warehouse, customer, handheld, handheld_location]):
+        return
+
+    receipt = ExportReceipt.query.filter_by(receipt_code="EXP-SHP-001").first()
+    if not receipt:
+        receipt = ExportReceipt(
+            receipt_code="EXP-SHP-001",
+            warehouse_id=warehouse.id,
+            customer_id=customer.id,
+            created_by=manager_user.id,
+            status="draft",
+            note="Phieu xuat da xac nhan de mo luong shipment toi thieu.",
+        )
+        receipt.details.append(
+            ExportReceiptDetail(
+                product_id=handheld.id,
+                location_id=handheld_location.id,
+                quantity=2,
+            )
+        )
+        db.session.add(receipt)
+        db.session.flush()
+        confirm_export_receipt(receipt, manager_user.id)
+
+    shipment = Shipment(
+        shipment_code="SHP-DEMO-001",
+        export_receipt_id=receipt.id,
+        shipper_id=shipper_user.id,
+        created_by=manager_user.id,
+        status="assigned",
+        note="Shipment demo da giao cho shipper de tiep tuc Module 7.",
+        assigned_at=utc_now(),
+    )
+    db.session.add(shipment)
+
+
+def seed_invoice_demo():
+    if Invoice.query.filter_by(invoice_code="INV-DEMO-001").first():
+        return
+
+    manager_user = User.query.filter_by(username="manager").first()
+    bank_account = BankAccount.query.filter_by(account_number="0123456789").first()
+    receipt = ExportReceipt.query.filter_by(receipt_code="EXP-SHP-001").first()
+
+    if not all([manager_user, receipt, receipt.customer]):
+        return
+
+    if receipt.invoice:
+        return
+
+    invoice = Invoice(
+        invoice_code="INV-DEMO-001",
+        export_receipt_id=receipt.id,
+        customer_id=receipt.customer_id,
+        bank_account_id=bank_account.id if bank_account and bank_account.status == "active" else None,
+        created_by=manager_user.id,
+        status="unpaid",
+        note="Hoa don demo tao tu phieu xuat da xac nhan de mo Module 8 toi thieu.",
+        issued_at=utc_now(),
+        total_amount=0,
+    )
+    db.session.add(invoice)
+    db.session.flush()
+
+    total_amount = 0.0
+    for index, detail in enumerate(receipt.details, start=1):
+        unit_price = float(1500000 if index == 1 else 120000)
+        line_total = float(detail.quantity) * unit_price
+        total_amount += line_total
+        invoice.details.append(
+            InvoiceDetail(
+                export_receipt_detail_id=detail.id,
+                product_id=detail.product_id,
+                location_id=detail.location_id,
+                quantity=float(detail.quantity),
+                unit_price=unit_price,
+                line_total=line_total,
+            )
+        )
+
+    invoice.total_amount = total_amount
+
+
+def seed_tasks_notifications_demo():
+    if InternalTask.query.filter_by(task_code="TSK-DEMO-001").first():
+        return
+
+    manager_user = User.query.filter_by(username="manager").first()
+    staff_user = User.query.filter_by(username="staff").first()
+    accountant_user = User.query.filter_by(username="accountant").first()
+    shipper_user = User.query.filter_by(username="shipper").first()
+
+    if not manager_user or not staff_user:
+        return
+
+    task = InternalTask(
+        task_code="TSK-DEMO-001",
+        title="Kiểm tra lại tồn thấp tại Kho Trung Tâm",
+        description="Ưu tiên kiểm tra các dòng tồn thấp trước ca xuất hàng chiều.",
+        assigned_to_id=staff_user.id,
+        created_by=manager_user.id,
+        status="todo",
+        priority="high",
+        due_at=utc_now(),
+    )
+    db.session.add(task)
+    db.session.flush()
+
+    notifications = [
+        Notification(
+            sender_id=manager_user.id,
+            receiver_id=staff_user.id,
+            title="Công việc mới TSK-DEMO-001",
+            content=task.title,
+            type="task",
+        ),
+    ]
+    if accountant_user:
+        notifications.append(
+            Notification(
+                sender_id=manager_user.id,
+                receiver_id=accountant_user.id,
+                title="Nhắc kiểm tra hóa đơn demo",
+                content="Có hóa đơn demo cần kiểm tra trạng thái thanh toán.",
+                type="payment",
+            )
+        )
+    if shipper_user:
+        notifications.append(
+            Notification(
+                sender_id=manager_user.id,
+                receiver_id=shipper_user.id,
+                title="Nhắc cập nhật vận chuyển",
+                content="Vui lòng cập nhật trạng thái shipment được giao trong ca hôm nay.",
+                type="shipment",
+            )
+        )
+    db.session.add_all(notifications)
+
+
 def seed_all():
     seed_roles_and_permissions()
     seed_default_users()
@@ -707,4 +932,8 @@ def seed_all():
     seed_import_receipt_demo()
     seed_export_receipt_demo()
     seed_stock_transfer_demo()
+    seed_stocktake_demo()
+    seed_shipment_demo()
+    seed_invoice_demo()
+    seed_tasks_notifications_demo()
     db.session.commit()

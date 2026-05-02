@@ -35,6 +35,74 @@ def test_inventory_list_returns_seeded_inventory_rows(client, auth_headers):
     assert any(item["quantity"] == 24 for item in payload["items"])
 
 
+def test_inventory_list_includes_stock_status_fields(client, auth_headers):
+    response = client.get("/inventory", headers=auth_headers("admin", "Admin@123"))
+
+    assert response.status_code == 200
+    payload = response.get_json()
+
+    low_stock_item = next(
+        item
+        for item in payload["items"]
+        if item["product_code"] == "PRD001" and item["warehouse_code"] == "WH002"
+    )
+    out_of_stock_item = next(
+        item
+        for item in payload["items"]
+        if item["product_code"] == "PRD004" and item["warehouse_code"] == "WH001"
+    )
+
+    assert low_stock_item["stock_status"] == "low_stock"
+    assert low_stock_item["stock_status_label"] == "Tồn thấp"
+    assert low_stock_item["is_low_stock"] is True
+    assert low_stock_item["shortage_quantity"] == 2
+
+    assert out_of_stock_item["stock_status"] == "out_of_stock"
+    assert out_of_stock_item["stock_status_label"] == "Hết hàng"
+    assert out_of_stock_item["is_low_stock"] is True
+    assert out_of_stock_item["shortage_quantity"] == 12
+
+
+def test_inventory_list_can_filter_low_stock_only(client, auth_headers):
+    response = client.get(
+        "/inventory?low_stock_only=true",
+        headers=auth_headers("manager", "Manager@123"),
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["total"] >= 1
+    assert all(item["stock_status"] in {"low_stock", "out_of_stock"} for item in payload["items"])
+    assert any(item["stock_status"] == "out_of_stock" for item in payload["items"])
+
+
+def test_inventory_list_can_filter_out_of_stock(client, auth_headers):
+    response = client.get(
+        "/inventory?stock_status=out_of_stock",
+        headers=auth_headers("manager", "Manager@123"),
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["items"]
+    assert all(item["stock_status"] == "out_of_stock" for item in payload["items"])
+    assert all(item["product_code"] == "PRD004" for item in payload["items"])
+
+
+def test_inventory_list_rejects_invalid_filter_ids(client, auth_headers):
+    invalid_warehouse = client.get(
+        "/inventory?warehouse_id=abc",
+        headers=auth_headers("admin", "Admin@123"),
+    )
+    invalid_location = client.get(
+        "/inventory?location_id=99999",
+        headers=auth_headers("admin", "Admin@123"),
+    )
+
+    assert invalid_warehouse.status_code == 400
+    assert invalid_location.status_code == 400
+
+
 def test_inventory_movements_returns_seeded_history(client, auth_headers):
     response = client.get("/inventory/movements", headers=auth_headers("manager", "Manager@123"))
 

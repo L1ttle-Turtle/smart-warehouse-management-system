@@ -15,10 +15,14 @@ const ExportReceiptsPage = lazy(() => import('./pages/ExportReceiptsPage'));
 const ForbiddenPage = lazy(() => import('./pages/ForbiddenPage'));
 const ImportReceiptsPage = lazy(() => import('./pages/ImportReceiptsPage'));
 const InventoryPage = lazy(() => import('./pages/InventoryPage'));
+const InvoicesPage = lazy(() => import('./pages/InvoicesPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const ProductsPage = lazy(() => import('./pages/ProductsPage'));
 const RolesPage = lazy(() => import('./pages/RolesPage'));
+const ShipmentsPage = lazy(() => import('./pages/ShipmentsPage'));
+const StocktakesPage = lazy(() => import('./pages/StocktakesPage'));
 const StockTransfersPage = lazy(() => import('./pages/StockTransfersPage'));
 const UsersPage = lazy(() => import('./pages/UsersPage'));
 const WarehousesPage = lazy(() => import('./pages/WarehousesPage'));
@@ -130,10 +134,47 @@ function App() {
             )}
           />
           <Route
+            path="shipments"
+            element={(
+              <ProtectedRoute requiredPermission="shipments.view">
+                <ShipmentsPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
             path="inventory"
             element={(
               <ProtectedRoute requiredPermission="inventory.view">
                 <InventoryPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="stocktakes"
+            element={(
+              <ProtectedRoute requiredPermission="inventory.view">
+                <StocktakesPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="invoices"
+            element={(
+              <ProtectedRoute requiredPermission="invoices.view">
+                <InvoicesPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="notifications"
+            element={(
+              <ProtectedRoute
+                requiredPermissionsAny={[
+                  'notifications.view',
+                  'tasks.view',
+                ]}
+              >
+                <NotificationsPage />
               </ProtectedRoute>
             )}
           />

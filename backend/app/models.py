@@ -401,6 +401,16 @@ class ExportReceipt(db.Model, SerializerMixin, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="ExportReceiptDetail.id",
     )
+    invoice = db.relationship(
+        "Invoice",
+        back_populates="export_receipt",
+        uselist=False,
+    )
+    shipment = db.relationship(
+        "Shipment",
+        back_populates="export_receipt",
+        uselist=False,
+    )
 
 
 class ExportReceiptDetail(db.Model, SerializerMixin, TimestampMixin):
@@ -415,6 +425,137 @@ class ExportReceiptDetail(db.Model, SerializerMixin, TimestampMixin):
     receipt = db.relationship("ExportReceipt", back_populates="details")
     product = db.relationship("Product", foreign_keys=[product_id])
     location = db.relationship("WarehouseLocation", foreign_keys=[location_id])
+
+
+class Shipment(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "shipments"
+    __table_args__ = (
+        db.UniqueConstraint("export_receipt_id", name="uq_shipment_export_receipt"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    shipment_code = db.Column(db.String(30), unique=True, nullable=False)
+    export_receipt_id = db.Column(db.Integer, db.ForeignKey("export_receipts.id"), nullable=False)
+    shipper_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    status = db.Column(db.String(20), default="assigned", nullable=False)
+    note = db.Column(db.String(255))
+    assigned_at = db.Column(db.DateTime)
+    in_transit_at = db.Column(db.DateTime)
+    delivered_at = db.Column(db.DateTime)
+    cancelled_at = db.Column(db.DateTime)
+
+    export_receipt = db.relationship("ExportReceipt", back_populates="shipment")
+    shipper = db.relationship("User", foreign_keys=[shipper_id])
+    creator = db.relationship("User", foreign_keys=[created_by])
+
+
+class Invoice(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "invoices"
+    __table_args__ = (
+        db.UniqueConstraint("export_receipt_id", name="uq_invoice_export_receipt"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_code = db.Column(db.String(30), unique=True, nullable=False)
+    export_receipt_id = db.Column(db.Integer, db.ForeignKey("export_receipts.id"), nullable=False)
+    customer_id = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=False)
+    bank_account_id = db.Column(db.Integer, db.ForeignKey("bank_accounts.id"))
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    status = db.Column(db.String(20), default="unpaid", nullable=False)
+    note = db.Column(db.String(255))
+    issued_at = db.Column(db.DateTime)
+    total_amount = db.Column(db.Float, default=0, nullable=False)
+
+    export_receipt = db.relationship("ExportReceipt", back_populates="invoice")
+    customer = db.relationship("Customer", foreign_keys=[customer_id])
+    bank_account = db.relationship("BankAccount", foreign_keys=[bank_account_id])
+    creator = db.relationship("User", foreign_keys=[created_by])
+    details = db.relationship(
+        "InvoiceDetail",
+        back_populates="invoice",
+        cascade="all, delete-orphan",
+        order_by="InvoiceDetail.id",
+    )
+    payments = db.relationship(
+        "Payment",
+        back_populates="invoice",
+        cascade="all, delete-orphan",
+        order_by="Payment.paid_at",
+    )
+
+
+class InvoiceDetail(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "invoice_details"
+
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_id = db.Column(db.Integer, db.ForeignKey("invoices.id"), nullable=False)
+    export_receipt_detail_id = db.Column(
+        db.Integer, db.ForeignKey("export_receipt_details.id"), nullable=False
+    )
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)
+    location_id = db.Column(db.Integer, db.ForeignKey("warehouse_locations.id"), nullable=False)
+    quantity = db.Column(db.Float, nullable=False)
+    unit_price = db.Column(db.Float, nullable=False)
+    line_total = db.Column(db.Float, nullable=False)
+
+    invoice = db.relationship("Invoice", back_populates="details")
+    export_receipt_detail = db.relationship("ExportReceiptDetail", foreign_keys=[export_receipt_detail_id])
+    product = db.relationship("Product", foreign_keys=[product_id])
+    location = db.relationship("WarehouseLocation", foreign_keys=[location_id])
+
+
+class Payment(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "payments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    payment_code = db.Column(db.String(30), unique=True, nullable=False)
+    invoice_id = db.Column(db.Integer, db.ForeignKey("invoices.id"), nullable=False)
+    bank_account_id = db.Column(db.Integer, db.ForeignKey("bank_accounts.id"))
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    payment_method = db.Column(db.String(30), default="cash", nullable=False)
+    paid_at = db.Column(db.DateTime, nullable=False)
+    note = db.Column(db.String(255))
+
+    invoice = db.relationship("Invoice", back_populates="payments")
+    bank_account = db.relationship("BankAccount", foreign_keys=[bank_account_id])
+    creator = db.relationship("User", foreign_keys=[created_by])
+
+
+class Notification(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "notifications"
+
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    receiver_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    title = db.Column(db.String(160), nullable=False)
+    content = db.Column(db.String(500), nullable=False)
+    type = db.Column(db.String(30), default="system", nullable=False)
+    is_read = db.Column(db.Boolean, default=False, nullable=False)
+    read_at = db.Column(db.DateTime)
+
+    sender = db.relationship("User", foreign_keys=[sender_id])
+    receiver = db.relationship("User", foreign_keys=[receiver_id])
+
+
+class InternalTask(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "tasks"
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_code = db.Column(db.String(30), unique=True, nullable=False)
+    title = db.Column(db.String(160), nullable=False)
+    description = db.Column(db.String(500))
+    assigned_to_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    status = db.Column(db.String(20), default="todo", nullable=False)
+    priority = db.Column(db.String(20), default="medium", nullable=False)
+    due_at = db.Column(db.DateTime)
+    completed_at = db.Column(db.DateTime)
+    cancelled_at = db.Column(db.DateTime)
+
+    assignee = db.relationship("User", foreign_keys=[assigned_to_id])
+    creator = db.relationship("User", foreign_keys=[created_by])
 
 
 class StockTransfer(db.Model, SerializerMixin, TimestampMixin):
@@ -456,6 +597,57 @@ class StockTransferDetail(db.Model, SerializerMixin, TimestampMixin):
     product = db.relationship("Product", foreign_keys=[product_id])
     source_location = db.relationship("WarehouseLocation", foreign_keys=[source_location_id])
     target_location = db.relationship("WarehouseLocation", foreign_keys=[target_location_id])
+
+
+class Stocktake(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "stocktakes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    stocktake_code = db.Column(db.String(30), unique=True, nullable=False)
+    warehouse_id = db.Column(db.Integer, db.ForeignKey("warehouses.id"), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    confirmed_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    cancelled_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    status = db.Column(db.String(20), default="draft", nullable=False)
+    note = db.Column(db.String(255))
+    confirmed_at = db.Column(db.DateTime)
+    cancelled_at = db.Column(db.DateTime)
+
+    warehouse = db.relationship("Warehouse", foreign_keys=[warehouse_id])
+    creator = db.relationship("User", foreign_keys=[created_by])
+    confirmer = db.relationship("User", foreign_keys=[confirmed_by])
+    canceller = db.relationship("User", foreign_keys=[cancelled_by])
+    details = db.relationship(
+        "StocktakeDetail",
+        back_populates="stocktake",
+        cascade="all, delete-orphan",
+        order_by="StocktakeDetail.id",
+    )
+
+
+class StocktakeDetail(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "stocktake_details"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "stocktake_id",
+            "product_id",
+            "location_id",
+            name="uq_stocktake_detail_product_location",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    stocktake_id = db.Column(db.Integer, db.ForeignKey("stocktakes.id"), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)
+    location_id = db.Column(db.Integer, db.ForeignKey("warehouse_locations.id"), nullable=False)
+    system_quantity = db.Column(db.Float, default=0, nullable=False)
+    actual_quantity = db.Column(db.Float, default=0, nullable=False)
+    difference_quantity = db.Column(db.Float, default=0, nullable=False)
+    note = db.Column(db.String(255))
+
+    stocktake = db.relationship("Stocktake", back_populates="details")
+    product = db.relationship("Product", foreign_keys=[product_id])
+    location = db.relationship("WarehouseLocation", foreign_keys=[location_id])
 
 
 class User(db.Model, SerializerMixin, TimestampMixin):

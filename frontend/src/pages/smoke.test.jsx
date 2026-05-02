@@ -1,8 +1,9 @@
 import { ConfigProvider } from 'antd';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
+import api from '../api/client';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/ProtectedRoute';
 import AuditLogsPage from './AuditLogsPage';
@@ -12,10 +13,14 @@ import EmployeesPage from './EmployeesPage';
 import ExportReceiptsPage from './ExportReceiptsPage';
 import ImportReceiptsPage from './ImportReceiptsPage';
 import InventoryPage from './InventoryPage';
+import InvoicesPage from './InvoicesPage';
 import LoginPage from './LoginPage';
+import NotificationsPage from './NotificationsPage';
 import ProfilePage from './ProfilePage';
 import ProductsPage from './ProductsPage';
 import RolesPage from './RolesPage';
+import ShipmentsPage from './ShipmentsPage';
+import StocktakesPage from './StocktakesPage';
 import StockTransfersPage from './StockTransfersPage';
 import UsersPage from './UsersPage';
 import WarehousesPage from './WarehousesPage';
@@ -37,6 +42,14 @@ const adminPermissions = [
   'import_receipts.manage',
   'stock_transfers.view',
   'stock_transfers.manage',
+  'shipments.view',
+  'shipments.manage',
+  'invoices.view',
+  'invoices.manage',
+  'notifications.view',
+  'notifications.manage',
+  'tasks.view',
+  'tasks.manage',
   'warehouses.view',
   'warehouses.manage',
   'locations.view',
@@ -67,6 +80,14 @@ const managerPermissions = [
   'import_receipts.manage',
   'stock_transfers.view',
   'stock_transfers.manage',
+  'shipments.view',
+  'shipments.manage',
+  'invoices.view',
+  'invoices.manage',
+  'notifications.view',
+  'notifications.manage',
+  'tasks.view',
+  'tasks.manage',
   'warehouses.view',
   'warehouses.manage',
   'locations.view',
@@ -87,6 +108,10 @@ const accountantPermissions = [
   'customers.manage',
   'bank_accounts.view',
   'bank_accounts.manage',
+  'invoices.view',
+  'invoices.manage',
+  'notifications.view',
+  'tasks.view',
 ];
 
 const staffPermissions = [
@@ -99,9 +124,21 @@ const staffPermissions = [
   'import_receipts.manage',
   'stock_transfers.view',
   'stock_transfers.manage',
+  'shipments.view',
+  'shipments.manage',
+  'notifications.view',
+  'tasks.view',
   'warehouses.view',
   'locations.view',
   'products.view',
+];
+
+const shipperPermissions = [
+  'dashboard.view',
+  'notifications.view',
+  'shipments.view',
+  'shipments.manage',
+  'tasks.view',
 ];
 
 function buildAuthState(overrides = {}) {
@@ -132,6 +169,80 @@ let authState = buildAuthState();
 vi.mock('../api/client', () => ({
   default: {
     get: vi.fn((url, config) => {
+      if (url === '/tasks/meta') {
+        return Promise.resolve({
+          data: {
+            users: [
+              {
+                id: 3,
+                username: 'staff',
+                full_name: 'Staff User',
+                role_name: 'staff',
+                status: 'active',
+              },
+              {
+                id: 4,
+                username: 'accountant',
+                full_name: 'Accountant User',
+                role_name: 'accountant',
+                status: 'active',
+              },
+            ],
+          },
+        });
+      }
+
+      if (url === '/tasks') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                task_code: 'TSK-DEMO-001',
+                title: 'Kiểm tra tồn thấp',
+                description: 'Kiểm tra các dòng tồn thấp trước ca xuất hàng.',
+                assigned_to_id: 3,
+                assigned_to_name: 'Staff User',
+                assigned_to_role: 'staff',
+                created_by: 2,
+                created_by_name: 'Manager User',
+                status: 'todo',
+                priority: 'high',
+                due_at: '2026-05-02T09:00:00',
+                created_at: '2026-05-02T08:00:00',
+              },
+            ],
+            total: 1,
+            page: 1,
+            page_size: 20,
+          },
+        });
+      }
+
+      if (url === '/notifications') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                sender_id: 2,
+                sender_name: 'Manager User',
+                receiver_id: 3,
+                receiver_name: 'Staff User',
+                title: 'Công việc mới TSK-DEMO-001',
+                content: 'Kiểm tra tồn thấp',
+                type: 'task',
+                is_read: false,
+                created_at: '2026-05-02T08:05:00',
+              },
+            ],
+            total: 1,
+            page: 1,
+            page_size: 20,
+          },
+        });
+      }
+
       if (url === '/roles') {
         return Promise.resolve({
           data: {
@@ -209,7 +320,14 @@ vi.mock('../api/client', () => ({
                 product_id: 1,
                 product_code: 'PRD001',
                 product_name: 'Máy quét mã vạch',
+                category_id: 1,
+                category_name: 'Äiá»‡n tá»­',
+                min_stock: 10,
                 quantity: 24,
+                stock_status: 'in_stock',
+                stock_status_label: 'Äá»§ hÃ ng',
+                is_low_stock: false,
+                shortage_quantity: 0,
                 updated_at: '2026-04-22T10:00:00',
               },
               {
@@ -223,10 +341,103 @@ vi.mock('../api/client', () => ({
                 product_id: 1,
                 product_code: 'PRD001',
                 product_name: 'Máy quét mã vạch',
+                category_id: 1,
+                category_name: 'Äiá»‡n tá»­',
+                min_stock: 10,
                 quantity: 8,
+                stock_status: 'low_stock',
+                stock_status_label: 'Tá»“n tháº¥p',
+                is_low_stock: true,
+                shortage_quantity: 2,
                 updated_at: '2026-04-22T10:15:00',
               },
+              {
+                id: 3,
+                warehouse_id: 1,
+                warehouse_code: 'WH001',
+                warehouse_name: 'Kho Trung Tam',
+                location_id: 3,
+                location_code: 'C-01',
+                location_name: 'Ke C-01',
+                product_id: 4,
+                product_code: 'PRD004',
+                product_name: 'Bá»™ Ä‘Ã m kho',
+                category_id: 1,
+                category_name: 'Äiá»‡n tá»­',
+                min_stock: 12,
+                quantity: 0,
+                stock_status: 'out_of_stock',
+                stock_status_label: 'Háº¿t hÃ ng',
+                is_low_stock: true,
+                shortage_quantity: 12,
+                updated_at: '2026-04-22T10:30:00',
+              },
             ],
+            total: 3,
+            page: 1,
+            page_size: 10,
+          },
+        });
+      }
+
+      if (url === '/stocktakes') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                stocktake_code: 'STK-DEMO-001',
+                warehouse_id: 1,
+                warehouse_code: 'WH001',
+                warehouse_name: 'Kho Trung Tam',
+                created_by: 2,
+                created_by_name: 'Manager User',
+                confirmed_by: null,
+                confirmed_by_name: null,
+                cancelled_by: null,
+                cancelled_by_name: null,
+                status: 'draft',
+                note: 'Phiáº¿u kiá»ƒm kÃª demo tá»‘i thiá»ƒu',
+                detail_count: 2,
+                total_actual_quantity: 23,
+                total_difference_quantity: -1,
+                confirmed_at: null,
+                cancelled_at: null,
+                created_at: '2026-04-24T08:30:00',
+                updated_at: '2026-04-24T08:45:00',
+                details: [
+                  {
+                    id: 1,
+                    product_id: 1,
+                    product_code: 'PRD001',
+                    product_name: 'MÃ¡y quÃ©t mÃ£ váº¡ch',
+                    location_id: 1,
+                    location_code: 'A-01',
+                    location_name: 'Ká»‡ A-01',
+                    system_quantity: 24,
+                    actual_quantity: 23,
+                    difference_quantity: -1,
+                    note: 'Thiáº¿u 1 thiáº¿t bá»‹ sau ca sÃ¡ng',
+                  },
+                  {
+                    id: 2,
+                    product_id: 4,
+                    product_code: 'PRD004',
+                    product_name: 'Bá»™ Ä‘Ã m kho',
+                    location_id: 3,
+                    location_code: 'C-01',
+                    location_name: 'Ká»‡ C-01',
+                    system_quantity: 0,
+                    actual_quantity: 0,
+                    difference_quantity: 0,
+                    note: '',
+                  },
+                ],
+              },
+            ],
+            total: 1,
+            page: 1,
+            page_size: 10,
           },
         });
       }
@@ -389,6 +600,222 @@ vi.mock('../api/client', () => ({
         });
       }
 
+      if (url === '/shipments') {
+        const shipmentItems = [
+          {
+            id: 1,
+            shipment_code: 'SHP-DEMO-001',
+            export_receipt_id: 2,
+            export_receipt_code: 'EXP-SHP-001',
+            warehouse_id: 2,
+            warehouse_code: 'WH002',
+            warehouse_name: 'Kho Mien Nam',
+            customer_id: 1,
+            customer_code: 'CUS001',
+            customer_name: 'Cong ty Binh Minh',
+            shipper_id: 5,
+            shipper_name: 'Shipper User',
+            created_by: 2,
+            created_by_name: 'Manager User',
+            status: 'assigned',
+            note: 'Giao tuyen noi thanh buoi chieu',
+            detail_count: 1,
+            total_quantity: 2,
+            assigned_at: '2026-04-25T14:00:00',
+            in_transit_at: null,
+            delivered_at: null,
+            cancelled_at: null,
+            created_at: '2026-04-25T13:55:00',
+            updated_at: '2026-04-25T14:00:00',
+            details: [
+              {
+                id: 1,
+                product_id: 6,
+                product_code: 'PRD006',
+                product_name: 'May in nhan mini',
+                location_id: 4,
+                location_code: 'A-01',
+                location_name: 'Day A-01',
+                quantity: 2,
+              },
+            ],
+          },
+        ];
+
+        return Promise.resolve({
+          data: {
+            items: shipmentItems,
+            total: shipmentItems.length,
+            page: 1,
+            page_size: 10,
+          },
+        });
+      }
+
+      if (url === '/shipments/meta') {
+        return Promise.resolve({
+          data: {
+            shippers: [
+              {
+                id: 5,
+                username: 'shipper',
+                full_name: 'Shipper User',
+                email: 'shipper@example.com',
+                phone: '0909000005',
+                status: 'active',
+                role_id: 5,
+                role_name: 'shipper',
+                employee_id: 5,
+                employee_code: 'EMP005',
+              },
+            ],
+            export_receipts: [
+              {
+                id: 2,
+                receipt_code: 'EXP-SHP-001',
+                warehouse_id: 2,
+                warehouse_code: 'WH002',
+                warehouse_name: 'Kho Mien Nam',
+                customer_id: 1,
+                customer_code: 'CUS001',
+                customer_name: 'Cong ty Binh Minh',
+                created_by: 2,
+                created_by_name: 'Manager User',
+                confirmed_by: 2,
+                confirmed_by_name: 'Manager User',
+                status: 'confirmed',
+                note: 'Phieu xuat san sang giao',
+                detail_count: 1,
+                total_quantity: 2,
+                confirmed_at: '2026-04-25T13:50:00',
+                created_at: '2026-04-25T13:40:00',
+                updated_at: '2026-04-25T13:50:00',
+                details: [
+                  {
+                    id: 1,
+                    product_id: 6,
+                    product_code: 'PRD006',
+                    product_name: 'May in nhan mini',
+                    location_id: 4,
+                    location_code: 'A-01',
+                    location_name: 'Day A-01',
+                    quantity: 2,
+                  },
+                ],
+              },
+            ],
+          },
+        });
+      }
+
+      if (url === '/invoices') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                invoice_code: 'INV-DEMO-001',
+                export_receipt_id: 2,
+                export_receipt_code: 'EXP-SHP-001',
+                warehouse_id: 2,
+                warehouse_code: 'WH002',
+                warehouse_name: 'Kho Mien Nam',
+                customer_id: 1,
+                customer_code: 'CUS001',
+                customer_name: 'Cong ty Binh Minh',
+                bank_account_id: 1,
+                bank_name: 'Vietcombank',
+                bank_account_number: '0123456789',
+                bank_account_holder: 'Cong ty Kho Thong Minh',
+                created_by: 2,
+                created_by_name: 'Manager User',
+                status: 'unpaid',
+                note: 'Hoa don demo tu phieu xuat da xac nhan',
+                detail_count: 1,
+                total_quantity: 2,
+                total_amount: 3000000,
+                paid_amount: 0,
+                remaining_amount: 3000000,
+                issued_at: '2026-04-28T10:00:00',
+                created_at: '2026-04-28T10:00:00',
+                updated_at: '2026-04-28T10:00:00',
+                details: [
+                  {
+                    id: 1,
+                    export_receipt_detail_id: 1,
+                    product_id: 6,
+                    product_code: 'PRD006',
+                    product_name: 'May in nhan mini',
+                    location_id: 4,
+                    location_code: 'A-01',
+                    location_name: 'Day A-01',
+                    quantity: 2,
+                    unit_price: 1500000,
+                    line_total: 3000000,
+                  },
+                ],
+                payments: [],
+              },
+            ],
+            total: 1,
+            page: 1,
+            page_size: 10,
+          },
+        });
+      }
+
+      if (url === '/invoices/meta') {
+        return Promise.resolve({
+          data: {
+            bank_accounts: [
+              {
+                id: 1,
+                bank_name: 'Vietcombank',
+                account_number: '0123456789',
+                account_holder: 'Cong ty Kho Thong Minh',
+                branch: 'Chi nhanh Quan 1',
+                status: 'active',
+              },
+            ],
+            export_receipts: [
+              {
+                id: 2,
+                receipt_code: 'EXP-SHP-001',
+                warehouse_id: 2,
+                warehouse_code: 'WH002',
+                warehouse_name: 'Kho Mien Nam',
+                customer_id: 1,
+                customer_code: 'CUS001',
+                customer_name: 'Cong ty Binh Minh',
+                created_by: 2,
+                created_by_name: 'Manager User',
+                confirmed_by: 2,
+                confirmed_by_name: 'Manager User',
+                status: 'confirmed',
+                note: 'Phieu xuat san sang lap hoa don',
+                detail_count: 1,
+                total_quantity: 2,
+                confirmed_at: '2026-04-28T09:55:00',
+                created_at: '2026-04-28T09:45:00',
+                updated_at: '2026-04-28T09:55:00',
+                details: [
+                  {
+                    id: 1,
+                    product_id: 6,
+                    product_code: 'PRD006',
+                    product_name: 'May in nhan mini',
+                    location_id: 4,
+                    location_code: 'A-01',
+                    location_name: 'Day A-01',
+                    quantity: 2,
+                  },
+                ],
+              },
+            ],
+          },
+        });
+      }
+
       if (url === '/warehouses') {
         return Promise.resolve({
           data: {
@@ -430,6 +857,33 @@ vi.mock('../api/client', () => ({
               },
               {
                 id: 2,
+                warehouse_id: 1,
+                warehouse_code: 'WH001',
+                warehouse_name: 'Kho Trung Tâm',
+                location_code: 'B-01',
+                location_name: 'Kệ B-01',
+                status: 'active',
+              },
+              {
+                id: 3,
+                warehouse_id: 1,
+                warehouse_code: 'WH001',
+                warehouse_name: 'Kho Trung Tâm',
+                location_code: 'C-01',
+                location_name: 'Kệ C-01',
+                status: 'active',
+              },
+              {
+                id: 4,
+                warehouse_id: 2,
+                warehouse_code: 'WH002',
+                warehouse_name: 'Kho Miền Nam',
+                location_code: 'A-01',
+                location_name: 'Dãy A-01',
+                status: 'active',
+              },
+              {
+                id: 5,
                 warehouse_id: 2,
                 warehouse_code: 'WH002',
                 warehouse_name: 'Kho Miền Nam',
@@ -438,7 +892,7 @@ vi.mock('../api/client', () => ({
                 status: 'active',
               },
             ],
-            total: 2,
+            total: 5,
             page: 1,
             page_size: 10,
           },
@@ -504,6 +958,36 @@ vi.mock('../api/client', () => ({
           return Promise.resolve({
             data: {
               items: [],
+            },
+          });
+        }
+
+        if (config?.params?.reference_type === 'stocktake') {
+          return Promise.resolve({
+            data: {
+              items: [
+                {
+                  id: 21,
+                  warehouse_id: 1,
+                  warehouse_code: 'WH001',
+                  warehouse_name: 'Kho Trung Tam',
+                  location_id: 1,
+                  location_code: 'A-01',
+                  location_name: 'Ke A-01',
+                  product_id: 1,
+                  product_code: 'PRD001',
+                  product_name: 'Máy quét mã vạch',
+                  movement_type: 'stocktake_adjustment',
+                  reference_type: 'stocktake',
+                  reference_id: 1,
+                  quantity_before: 24,
+                  quantity_change: -1,
+                  quantity_after: 23,
+                  performer_name: 'Manager User',
+                  note: 'Điều chỉnh sau kiểm kê kho',
+                  created_at: '2026-04-24T09:00:00',
+                },
+              ],
             },
           });
         }
@@ -803,6 +1287,7 @@ function renderWithProviders(node, route = '/') {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
   authState = buildAuthState();
 });
 
@@ -952,6 +1437,17 @@ test('renders inventory page', async () => {
   await waitFor(() => expect(screen.getAllByText(/Kho Trung Tam/i).length).toBeGreaterThan(0));
   expect(screen.getByRole('tab', { name: /Tồn hiện tại/i })).toBeInTheDocument();
   expect(screen.getByRole('tab', { name: /Lịch sử biến động/i })).toBeInTheDocument();
+});
+
+test('inventory page shows stock status columns and low-stock filter', async () => {
+  renderWithProviders(<InventoryPage />, '/inventory');
+
+  await waitFor(() => expect(screen.getByRole('columnheader', { name: /Trạng thái/i })).toBeInTheDocument());
+  expect(screen.getByRole('columnheader', { name: /Tồn hiện tại/i })).toBeInTheDocument();
+  expect(screen.getByRole('columnheader', { name: /Tồn tối thiểu/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Chỉ tồn thấp/i })).toBeInTheDocument();
+  expect(screen.getAllByText(/Hết hàng/i).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/Tồn thấp/i).length).toBeGreaterThan(0);
 });
 
 test('renders warehouses page with warehouse and location tabs', async () => {
@@ -1140,6 +1636,121 @@ test('inventory page shows stock adjustment tab for staff', async () => {
 
   await waitFor(() => expect(screen.getAllByText(/Kho Trung Tam/i).length).toBeGreaterThan(0));
   expect(screen.getByRole('tab', { name: /Điều chỉnh tồn kho/i })).toBeInTheDocument();
+});
+
+test('renders stocktakes page with draft stocktake and opens stocktake form', async () => {
+  renderWithProviders(<StocktakesPage />, '/stocktakes');
+
+  await waitFor(() => expect(screen.getByText(/Kiểm kê kho/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getAllByText(/STK-DEMO-001/i).length).toBeGreaterThan(0));
+  expect(screen.getByText(/Lịch sử biến động/i)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Xác nhận/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Hủy phiếu/i })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: /Thêm phiếu kiểm kê/i }));
+
+  await waitFor(() => expect(screen.getByText(/Kho kiểm kê/i)).toBeInTheDocument());
+  expect(screen.getByText(/Sản phẩm 1/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/^Vị trí$/i).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/Tồn thực tế/i).length).toBeGreaterThan(0);
+  expect(screen.getByRole('button', { name: /Tạo phiếu nháp/i })).toBeInTheDocument();
+});
+
+test('renders shipments page with create action for manager flow', async () => {
+  renderWithProviders(<ShipmentsPage />, '/shipments');
+
+  await waitFor(() => expect(screen.getByText(/Vận chuyển/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getAllByText(/SHP-DEMO-001/i).length).toBeGreaterThan(0));
+  expect(screen.getByRole('button', { name: /Tạo shipment/i })).toBeInTheDocument();
+  expect(screen.getByText(/Chi tiết shipment/i)).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: /Tạo shipment/i }));
+
+  await waitFor(() => expect(screen.getByText(/Tạo shipment từ phiếu xuất đã xác nhận/i)).toBeInTheDocument());
+  expect(screen.getAllByText(/Phiếu xuất đã xác nhận/i).length).toBeGreaterThan(0);
+  expect(screen.getByText(/Shipper phụ trách/i)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^Tạo shipment$/i })).toBeInTheDocument();
+});
+
+test('shipper can render shipments page and see delivery actions', async () => {
+  authState = buildAuthState({
+    permissions: shipperPermissions,
+    user: {
+      id: 5,
+      full_name: 'Shipper User',
+      role: 'shipper',
+    },
+  });
+
+  renderWithProviders(<ShipmentsPage />, '/shipments');
+
+  await waitFor(() => expect(screen.getAllByText(/SHP-DEMO-001/i).length).toBeGreaterThan(0));
+  expect(screen.queryByRole('button', { name: /Tạo shipment/i })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Bắt đầu giao/i })).toBeInTheDocument();
+});
+
+test('renders invoices page with list and create action for manager flow', async () => {
+  renderWithProviders(<InvoicesPage />, '/invoices');
+
+  await waitFor(() => expect(screen.getByRole('heading', { name: /^Hóa đơn$/i })).toBeInTheDocument());
+  await waitFor(() => expect(screen.getAllByText(/INV-DEMO-001/i).length).toBeGreaterThan(0));
+  expect(screen.getByText(/Chi tiết hóa đơn/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/Ghi nhận thanh toán/i).length).toBeGreaterThan(0);
+  expect(screen.getByText(/Lịch sử thanh toán/i)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Ghi nhận/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Tạo hóa đơn/i })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: /Thu đủ/i }));
+  fireEvent.click(screen.getByRole('button', { name: /Ghi nhận/i }));
+
+  await waitFor(() => expect(api.post).toHaveBeenCalledWith(
+    '/payments',
+    expect.objectContaining({
+      invoice_id: 1,
+      amount: 3000000,
+    }),
+  ));
+
+  fireEvent.click(screen.getByRole('button', { name: /Tạo hóa đơn/i }));
+
+  await waitFor(() => expect(screen.getByText(/Tạo hóa đơn từ phiếu xuất đã xác nhận/i)).toBeInTheDocument());
+  expect(screen.getAllByText(/Phiếu xuất đã xác nhận/i).length).toBeGreaterThan(0);
+  expect(screen.getByText(/Tài khoản ngân hàng nhận tiền/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/Đơn giá/i).length).toBeGreaterThan(0);
+  expect(screen.getAllByRole('button', { name: /Tạo hóa đơn/i }).length).toBeGreaterThan(0);
+});
+
+test('accountant can render invoices page for demo review', async () => {
+  authState = buildAuthState({
+    permissions: accountantPermissions,
+    user: {
+      id: 4,
+      full_name: 'Accountant User',
+      role: 'accountant',
+    },
+  });
+
+  renderWithProviders(<InvoicesPage />, '/invoices');
+
+  await waitFor(() => expect(screen.getAllByText(/INV-DEMO-001/i).length).toBeGreaterThan(0));
+  expect(screen.getByRole('button', { name: /Tạo hóa đơn/i })).toBeInTheDocument();
+  expect(screen.getByText(/Chi tiết hóa đơn/i)).toBeInTheDocument();
+});
+
+test('renders notifications page with tasks and notification actions', async () => {
+  renderWithProviders(<NotificationsPage />, '/notifications');
+
+  await waitFor(() => expect(screen.getByText(/Công việc & thông báo/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getAllByText(/TSK-DEMO-001/i).length).toBeGreaterThan(0));
+  expect(screen.getByRole('tab', { name: /Công việc/i })).toBeInTheDocument();
+  expect(screen.getByRole('tab', { name: /Thông báo/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Tạo công việc/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Gửi thông báo/i })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('tab', { name: /Thông báo/i }));
+
+  await waitFor(() => expect(screen.getAllByText(/Công việc mới TSK-DEMO-001/i).length).toBeGreaterThan(0));
+  expect(screen.getByRole('button', { name: /Đánh dấu đã đọc/i })).toBeInTheDocument();
 });
 
 test('redirects unauthenticated users to login', async () => {
