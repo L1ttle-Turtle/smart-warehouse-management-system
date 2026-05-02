@@ -103,6 +103,19 @@ def test_inventory_list_rejects_invalid_filter_ids(client, auth_headers):
     assert invalid_location.status_code == 400
 
 
+def test_inventory_list_allows_large_lookup_page_size(client, auth_headers):
+    response = client.get(
+        "/inventory?page=1&per_page=500&sort_by=updated_at&sort_order=desc",
+        headers=auth_headers("admin", "Admin@123"),
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["page_size"] == 500
+    assert payload["per_page"] == 500
+    assert len(payload["items"]) >= 1
+
+
 def test_inventory_movements_returns_seeded_history(client, auth_headers):
     response = client.get("/inventory/movements", headers=auth_headers("manager", "Manager@123"))
 

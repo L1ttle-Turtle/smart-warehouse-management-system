@@ -26,7 +26,96 @@ function statusColor(status) {
   return 'default';
 }
 
+const ROLE_LABELS = {
+  admin: 'Quản trị hệ thống',
+  manager: 'Quản lý kho',
+  staff: 'Nhân viên kho',
+  accountant: 'Kế toán',
+  shipper: 'Nhân viên giao hàng',
+};
+
+const STATUS_LABELS = {
+  active: 'Đang hiệu lực',
+  expired: 'Đã hết hạn',
+  revoked: 'Đã thu hồi',
+};
+
+const PERMISSION_LABELS = {
+  'dashboard.view': 'Xem trang tổng quan',
+  'audit_logs.view': 'Xem nhật ký hệ thống',
+  'roles.view': 'Xem vai trò và quyền',
+  'delegations.manage': 'Trao quyền cho tài khoản khác',
+  'users.view': 'Xem tài khoản',
+  'users.manage': 'Quản lý tài khoản',
+  'employees.view': 'Xem nhân sự',
+  'employees.manage': 'Quản lý nhân sự',
+  'categories.view': 'Xem nhóm hàng',
+  'categories.manage': 'Quản lý nhóm hàng',
+  'suppliers.view': 'Xem nhà cung cấp',
+  'suppliers.manage': 'Quản lý nhà cung cấp',
+  'customers.view': 'Xem khách hàng',
+  'customers.manage': 'Quản lý khách hàng',
+  'bank_accounts.view': 'Xem tài khoản ngân hàng',
+  'bank_accounts.manage': 'Quản lý tài khoản ngân hàng',
+  'products.view': 'Xem sản phẩm',
+  'products.manage': 'Quản lý sản phẩm',
+  'warehouses.view': 'Xem kho',
+  'warehouses.manage': 'Quản lý kho',
+  'locations.view': 'Xem vị trí kho',
+  'locations.manage': 'Quản lý vị trí kho',
+  'inventory.view': 'Xem tồn kho',
+  'inventory.manage': 'Điều chỉnh tồn kho',
+  'import_receipts.view': 'Xem phiếu nhập kho',
+  'import_receipts.manage': 'Quản lý phiếu nhập kho',
+  'export_receipts.view': 'Xem phiếu xuất kho',
+  'export_receipts.manage': 'Quản lý phiếu xuất kho',
+  'stock_transfers.view': 'Xem điều chuyển kho',
+  'stock_transfers.manage': 'Quản lý điều chuyển kho',
+  'shipments.view': 'Xem vận chuyển',
+  'shipments.manage': 'Quản lý vận chuyển',
+  'invoices.view': 'Xem hóa đơn',
+  'invoices.manage': 'Quản lý hóa đơn và thanh toán',
+  'notifications.view': 'Xem thông báo',
+  'notifications.manage': 'Gửi thông báo',
+  'tasks.view': 'Xem công việc',
+  'tasks.manage': 'Giao việc nội bộ',
+};
+
+const PERMISSION_DESCRIPTIONS = {
+  'delegations.manage': 'Cho phép cấp tạm thời một quyền mình đang có cho đúng một tài khoản cụ thể.',
+  'users.manage': 'Tạo, sửa, khóa tài khoản và gán vai trò trong phạm vi được phép.',
+  'employees.manage': 'Tạo, sửa hồ sơ nhân sự và liên kết với tài khoản đăng nhập.',
+  'inventory.manage': 'Thực hiện các thao tác làm thay đổi tồn kho như nhập, xuất, điều chuyển hoặc kiểm kê.',
+  'invoices.manage': 'Tạo hóa đơn và ghi nhận thanh toán thủ công.',
+};
+
+function getRoleLabel(roleName) {
+  if (!roleName) return '-';
+  return ROLE_LABELS[String(roleName).toLowerCase()] || roleName;
+}
+
+function getStatusLabel(status) {
+  return STATUS_LABELS[status] || status || '-';
+}
+
+function getPermissionLabel(permissionName) {
+  return PERMISSION_LABELS[permissionName] || permissionName || 'Quyền chưa đặt tên';
+}
+
+function getPermissionDescription(permissionName, fallback) {
+  if (PERMISSION_DESCRIPTIONS[permissionName]) {
+    return PERMISSION_DESCRIPTIONS[permissionName];
+  }
+  if (PERMISSION_LABELS[permissionName]) {
+    return `Cho phép ${PERMISSION_LABELS[permissionName].toLocaleLowerCase('vi-VN')} trong hệ thống.`;
+  }
+  return fallback || 'Quyền thao tác trong hệ thống.';
+}
+
 function PermissionCard({ item, column, onDragStart, onDelegate, onRevoke }) {
+  const permissionLabel = getPermissionLabel(item.permission_name);
+  const permissionDescription = getPermissionDescription(item.permission_name, item.description);
+
   return (
     <div
       className="permission-card"
@@ -35,13 +124,16 @@ function PermissionCard({ item, column, onDragStart, onDelegate, onRevoke }) {
     >
       <Space orientation="vertical" size={8} style={{ width: '100%' }}>
         <div>
-          <Tag color={column === 'available' ? 'blue' : 'gold'}>{item.permission_name}</Tag>
-          {column !== 'available' ? <Tag color={statusColor(item.status)}>{item.status}</Tag> : null}
+          <Tag color={column === 'available' ? 'blue' : 'gold'}>{permissionLabel}</Tag>
+          {column !== 'available' ? <Tag color={statusColor(item.status)}>{getStatusLabel(item.status)}</Tag> : null}
         </div>
         <Typography.Text type="secondary">
           {column === 'available'
-            ? item.description || 'Quyền hiện bạn đang có và có thể ủy quyền.'
-            : `Cấp bởi ${item.grantor_user_name} (${item.grantor_role_name})`}
+            ? permissionDescription
+            : `Cấp bởi ${item.grantor_user_name} (${getRoleLabel(item.grantor_role_name)})`}
+        </Typography.Text>
+        <Typography.Text type="secondary" className="permission-code">
+          Mã quyền: {item.permission_name}
         </Typography.Text>
         {item.expires_at ? (
           <Typography.Text type="secondary">
@@ -205,7 +297,7 @@ function DelegationPage() {
     () => [
       { label: 'Tất cả', value: 'all' },
       ...meta.target_roles.map((role) => ({
-        label: role.role_name,
+        label: getRoleLabel(role.role_name),
         value: String(role.id),
       })),
     ],
@@ -310,7 +402,7 @@ function DelegationPage() {
         <Col xs={24} md={8}>
           <Card className="page-card" styles={{ body: { padding: 24 } }}>
             <Typography.Text type="secondary">Vai trò hiện tại</Typography.Text>
-            <div className="metric-value">{meta.grantor?.role_name || '-'}</div>
+            <div className="metric-value">{getRoleLabel(meta.grantor?.role_name)}</div>
           </Card>
         </Col>
         <Col xs={24} md={8}>
@@ -394,7 +486,7 @@ function DelegationPage() {
               { title: 'Username', dataIndex: 'username', key: 'username' },
               { title: 'Họ tên', dataIndex: 'full_name', key: 'full_name', render: (value) => value || '-' },
               { title: 'Email', dataIndex: 'email', key: 'email', render: (value) => value || '-' },
-              { title: 'Vai trò', dataIndex: 'role_name', key: 'role_name', render: (value) => <Tag color="cyan">{value}</Tag> },
+              { title: 'Vai trò', dataIndex: 'role_name', key: 'role_name', render: (value) => <Tag color="cyan">{getRoleLabel(value)}</Tag> },
               {
                 title: 'Trạng thái',
                 dataIndex: 'status',
@@ -432,7 +524,7 @@ function DelegationPage() {
                   </div>
                   <Space wrap>
                     <Tag color="blue">@{selectedTargetUser.username}</Tag>
-                    <Tag color="cyan">{selectedTargetUser.role_name}</Tag>
+                    <Tag color="cyan">{getRoleLabel(selectedTargetUser.role_name)}</Tag>
                   </Space>
                 </Card>
               </Col>
@@ -579,15 +671,22 @@ function DelegationPage() {
               title: 'Quyền',
               dataIndex: 'permission_name',
               key: 'permission_name',
-              render: (value) => <Tag color="gold">{value}</Tag>,
+              render: (value) => (
+                <Space orientation="vertical" size={2}>
+                  <Tag color="gold">{getPermissionLabel(value)}</Tag>
+                  <Typography.Text type="secondary" className="permission-code">
+                    Mã quyền: {value}
+                  </Typography.Text>
+                </Space>
+              ),
             },
             { title: 'Người cấp', dataIndex: 'grantor_user_name', key: 'grantor_user_name' },
-            { title: 'Vai trò cấp', dataIndex: 'grantor_role_name', key: 'grantor_role_name' },
+            { title: 'Vai trò cấp', dataIndex: 'grantor_role_name', key: 'grantor_role_name', render: (value) => getRoleLabel(value) },
             {
               title: 'Trạng thái',
               dataIndex: 'status',
               key: 'status',
-              render: (value) => <Tag color={statusColor(value)}>{value}</Tag>,
+              render: (value) => <Tag color={statusColor(value)}>{getStatusLabel(value)}</Tag>,
             },
             {
               title: 'Hạn dùng',

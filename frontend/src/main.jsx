@@ -10,13 +10,38 @@ import './index.css';
 
 const theme = {
   token: {
-    colorPrimary: '#1f6f5f',
-    colorInfo: '#1f6f5f',
-    colorSuccess: '#2d8f78',
-    colorWarning: '#d49727',
-    colorError: '#cc5b45',
-    borderRadius: 18,
-    fontFamily: '"IBM Plex Sans", sans-serif',
+    colorPrimary: '#7c3aed',
+    colorInfo: '#7c3aed',
+    colorSuccess: '#10b981',
+    colorWarning: '#f59e0b',
+    colorError: '#ef4444',
+    colorText: '#18181b',
+    colorTextSecondary: '#71717a',
+    colorBgLayout: '#f7f4ff',
+    colorBgContainer: '#ffffff',
+    borderRadius: 16,
+    fontFamily: '"Plus Jakarta Sans", sans-serif',
+    boxShadow: '0 18px 50px rgba(76, 29, 149, 0.12)',
+  },
+  components: {
+    Button: {
+      borderRadius: 14,
+      controlHeight: 40,
+    },
+    Card: {
+      borderRadiusLG: 24,
+    },
+    Table: {
+      borderColor: 'rgba(124, 58, 237, 0.1)',
+      headerBg: 'rgba(250, 245, 255, 0.85)',
+      headerColor: '#3b0764',
+    },
+    Input: {
+      borderRadius: 14,
+    },
+    Select: {
+      borderRadius: 14,
+    },
   },
 };
 
