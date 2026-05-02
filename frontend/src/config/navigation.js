@@ -1,5 +1,6 @@
 import {
   AppstoreOutlined,
+  BarChartOutlined,
   CarOutlined,
   DashboardOutlined,
   DatabaseOutlined,
@@ -68,6 +69,12 @@ export const navigationItems = [
       'tasks.view',
       'notifications.view',
     ],
+  },
+  {
+    key: '/reports',
+    label: 'Báo cáo',
+    icon: BarChartOutlined,
+    permission: 'reports.view',
   },
   { key: '/inventory', label: 'Tồn kho', icon: DatabaseOutlined, permission: 'inventory.view' },
   { key: '/stocktakes', label: 'Kiểm kê kho', icon: FileSearchOutlined, permission: 'inventory.view' },

@@ -59,6 +59,7 @@ const PERMISSION_LABELS = {
   'bank_accounts.manage': 'Quản lý tài khoản ngân hàng',
   'products.view': 'Xem sản phẩm',
   'products.manage': 'Quản lý sản phẩm',
+  'reports.view': 'Xem báo cáo',
   'warehouses.view': 'Xem kho',
   'warehouses.manage': 'Quản lý kho',
   'locations.view': 'Xem vị trí kho',

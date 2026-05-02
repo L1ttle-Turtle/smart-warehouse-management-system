@@ -34,7 +34,7 @@ def month_key(value):
 def dashboard():
     pending_receipts = ImportReceipt.query.filter_by(status="draft").count()
     pending_exports = ExportReceipt.query.filter_by(status="draft").count()
-    active_shipments = Shipment.query.filter(Shipment.shipping_status.in_(["pending", "preparing", "delivering"])).count()
+    active_shipments = Shipment.query.filter(Shipment.status.in_(["assigned", "in_transit"])).count()
     low_stock = Product.query.filter(Product.quantity_total <= Product.min_stock).count()
     return jsonify(
         {
@@ -110,23 +110,31 @@ def top_products():
 @jwt_required()
 @permission_required("reports.view")
 def shipment_performance():
-    on_time = 0
-    delayed = 0
-    pending = 0
+    assigned = 0
+    in_transit = 0
+    delivered = 0
+    cancelled = 0
     for shipment in Shipment.query.all():
-        if shipment.shipping_status in {"pending", "preparing", "delivering"}:
-            pending += 1
-            continue
-        if shipment.expected_delivery_at and shipment.delivered_at:
-            if shipment.delivered_at <= shipment.expected_delivery_at:
-                on_time += 1
-            else:
-                delayed += 1
-        elif shipment.shipping_status == "delivered":
-            on_time += 1
+        if shipment.status == "assigned":
+            assigned += 1
+        elif shipment.status == "in_transit":
+            in_transit += 1
+        elif shipment.status == "delivered":
+            delivered += 1
+        elif shipment.status == "cancelled":
+            cancelled += 1
         else:
-            delayed += 1
-    return jsonify({"items": [{"status": "on_time", "count": on_time}, {"status": "delayed", "count": delayed}, {"status": "pending", "count": pending}]})
+            assigned += 1
+    return jsonify(
+        {
+            "items": [
+                {"status": "assigned", "status_label": "Đã phân công", "count": assigned},
+                {"status": "in_transit", "status_label": "Đang giao", "count": in_transit},
+                {"status": "delivered", "status_label": "Đã giao", "count": delivered},
+                {"status": "cancelled", "status_label": "Đã hủy", "count": cancelled},
+            ]
+        }
+    )
 
 
 @reports_bp.get("/revenue")
@@ -136,8 +144,8 @@ def revenue():
     revenue_map = defaultdict(float)
     payment_status_map = defaultdict(int)
     for invoice in Invoice.query.all():
-        revenue_map[month_key(invoice.created_at)] += invoice.final_amount
-        payment_status_map[invoice.payment_status] += 1
+        revenue_map[month_key(invoice.created_at)] += float(invoice.total_amount or 0)
+        payment_status_map[invoice.status] += 1
     revenue_items = [
         {"month": month, "revenue": amount}
         for month, amount in sorted(revenue_map.items())

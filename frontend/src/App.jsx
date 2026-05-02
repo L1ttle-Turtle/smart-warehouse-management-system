@@ -20,6 +20,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const ProductsPage = lazy(() => import('./pages/ProductsPage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 const RolesPage = lazy(() => import('./pages/RolesPage'));
 const ShipmentsPage = lazy(() => import('./pages/ShipmentsPage'));
 const StocktakesPage = lazy(() => import('./pages/StocktakesPage'));
@@ -175,6 +176,14 @@ function App() {
                 ]}
               >
                 <NotificationsPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="reports"
+            element={(
+              <ProtectedRoute requiredPermission="reports.view">
+                <ReportsPage />
               </ProtectedRoute>
             )}
           />

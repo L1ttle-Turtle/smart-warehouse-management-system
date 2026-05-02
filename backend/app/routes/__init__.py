@@ -10,6 +10,7 @@ from .payments import payments_bp
 from .people import people_bp
 from .products import products_bp
 from .rbac import rbac_bp
+from .reports import reports_bp
 from .shipments import shipments_bp
 from .stock_transfers import stock_transfers_bp
 from .stocktakes import stocktakes_bp
@@ -29,6 +30,7 @@ def register_blueprints(app):
     app.register_blueprint(people_bp)
     app.register_blueprint(products_bp)
     app.register_blueprint(rbac_bp)
+    app.register_blueprint(reports_bp, url_prefix="/reports")
     app.register_blueprint(shipments_bp)
     app.register_blueprint(stock_transfers_bp)
     app.register_blueprint(stocktakes_bp)
