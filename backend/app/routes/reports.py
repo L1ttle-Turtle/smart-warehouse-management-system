@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime
 
 from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required

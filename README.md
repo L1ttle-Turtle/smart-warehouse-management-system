@@ -1,5 +1,11 @@
 # Warehouse IQ
 
+## Cập nhật mới nhất
+
+- Đã bật Module 11 mức tối thiểu cho demo: backend `/reports/*` và frontend route `/reports`.
+- Trang báo cáo hiện có các lát cắt: tồn kho theo kho, nhập/xuất theo tháng, trạng thái vận chuyển, doanh thu hóa đơn, top hàng hóa và trạng thái thanh toán.
+- Đã sửa route reports để dùng đúng model hiện tại: `Shipment.status`, `Invoice.status`, `Invoice.total_amount`.
+
 Hệ thống quản lý kho hàng thông minh cho doanh nghiệp vừa và nhỏ, phát triển theo hướng đồ án tốt nghiệp nhưng ưu tiên khả năng chạy thật, test được và demo được theo từng module.
 
 Trạng thái hiện tại của repo: **đã hoàn thành nền tảng Module 1-5, hoàn thiện Module 6.5, mở Module 7 mức tối thiểu, có hóa đơn + payment thủ công cho Module 8 và đã mở Module 9 tối thiểu với công việc/thông báo nội bộ**.

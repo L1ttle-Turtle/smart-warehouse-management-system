@@ -18,6 +18,7 @@ import LoginPage from './LoginPage';
 import NotificationsPage from './NotificationsPage';
 import ProfilePage from './ProfilePage';
 import ProductsPage from './ProductsPage';
+import ReportsPage from './ReportsPage';
 import RolesPage from './RolesPage';
 import ShipmentsPage from './ShipmentsPage';
 import StocktakesPage from './StocktakesPage';
@@ -56,6 +57,7 @@ const adminPermissions = [
   'locations.manage',
   'products.view',
   'products.manage',
+  'reports.view',
   'categories.view',
   'categories.manage',
   'suppliers.view',
@@ -94,6 +96,7 @@ const managerPermissions = [
   'locations.manage',
   'products.view',
   'products.manage',
+  'reports.view',
   'categories.view',
   'categories.manage',
   'suppliers.view',
@@ -111,6 +114,7 @@ const accountantPermissions = [
   'invoices.view',
   'invoices.manage',
   'notifications.view',
+  'reports.view',
   'tasks.view',
 ];
 
@@ -239,6 +243,62 @@ vi.mock('../api/client', () => ({
             total: 1,
             page: 1,
             page_size: 20,
+          },
+        });
+      }
+
+      if (url === '/reports/inventory-by-warehouse') {
+        return Promise.resolve({
+          data: {
+            items: [
+              { warehouse_name: 'Kho Trung Tam', quantity: 184 },
+              { warehouse_name: 'Kho Mien Nam', quantity: 130 },
+            ],
+          },
+        });
+      }
+
+      if (url === '/reports/stock-movement') {
+        return Promise.resolve({
+          data: {
+            items: [
+              { month: '2026-05', import_quantity: 45, export_quantity: 19 },
+            ],
+          },
+        });
+      }
+
+      if (url === '/reports/top-products') {
+        return Promise.resolve({
+          data: {
+            items: [
+              { product_id: 1, product_name: 'Máy quét mã vạch', quantity: 12 },
+            ],
+          },
+        });
+      }
+
+      if (url === '/reports/shipment-performance') {
+        return Promise.resolve({
+          data: {
+            items: [
+              { status: 'assigned', status_label: 'Đã phân công', count: 1 },
+              { status: 'delivered', status_label: 'Đã giao', count: 2 },
+            ],
+          },
+        });
+      }
+
+      if (url === '/reports/revenue') {
+        return Promise.resolve({
+          data: {
+            revenue: [
+              { month: '2026-05', revenue: 4200000 },
+            ],
+            payment_status: [
+              { status: 'unpaid', count: 1 },
+              { status: 'paid', count: 1 },
+            ],
           },
         });
       }
@@ -1735,6 +1795,18 @@ test('accountant can render invoices page for demo review', async () => {
   await waitFor(() => expect(screen.getAllByText(/INV-DEMO-001/i).length).toBeGreaterThan(0));
   expect(screen.getByRole('button', { name: /Tạo hóa đơn/i })).toBeInTheDocument();
   expect(screen.getByText(/Chi tiết hóa đơn/i)).toBeInTheDocument();
+});
+
+test('renders reports page with business summary charts', async () => {
+  renderWithProviders(<ReportsPage />, '/reports');
+
+  await waitFor(() => expect(screen.getByText(/Tồn kho theo kho/i)).toBeInTheDocument());
+  expect(screen.getByText(/Nhập xuất theo tháng/i)).toBeInTheDocument();
+  expect(screen.getByText(/Trạng thái vận chuyển/i)).toBeInTheDocument();
+  expect(screen.getByText(/Doanh thu hóa đơn/i)).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByText(/Máy quét mã vạch/i)).toBeInTheDocument());
+  expect(screen.getByText(/Chưa thanh toán/i)).toBeInTheDocument();
+  expect(screen.getByText(/Đã thanh toán/i)).toBeInTheDocument();
 });
 
 test('renders notifications page with tasks and notification actions', async () => {

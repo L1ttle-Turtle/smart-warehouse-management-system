@@ -6,6 +6,25 @@ import api from '../api/client';
 import SectionCard from '../components/SectionCard';
 import { formatCurrency } from '../utils/format';
 
+const chartColors = {
+  primary: '#7c3aed',
+  success: '#10b981',
+  warning: '#f59e0b',
+  danger: '#ef4444',
+  teal: '#14b8a6',
+};
+
+const paymentStatusLabels = {
+  unpaid: 'Chưa thanh toán',
+  partial: 'Thanh toán một phần',
+  paid: 'Đã thanh toán',
+  cancelled: 'Đã hủy',
+};
+
+function getPaymentStatusLabel(status) {
+  return paymentStatusLabels[status] || status || '-';
+}
+
 function ReportsPage() {
   const [inventoryData, setInventoryData] = useState([]);
   const [stockMovement, setStockMovement] = useState([]);
@@ -31,64 +50,86 @@ function ReportsPage() {
         setPaymentStatus(revenueResponse.data.payment_status || []);
       })
       .catch((error) => {
-        message.error(error.response?.data?.message || 'Khong tai duoc bao cao.');
+        message.error(error.response?.data?.message || 'Không tải được dữ liệu báo cáo.');
       });
   }, []);
 
   return (
     <Row gutter={[16, 16]}>
       <Col xs={24} xl={12}>
-        <SectionCard title="Ton kho theo kho">
+        <SectionCard
+          title="Tồn kho theo kho"
+          subtitle="Tổng số lượng tồn hiện tại, gom theo từng kho để nhìn nhanh năng lực lưu trữ."
+        >
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={inventoryData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="warehouse_name" />
               <YAxis />
               <Tooltip />
-              <Bar dataKey="quantity" fill="#1f6f5f" />
+              <Bar dataKey="quantity" fill={chartColors.primary} />
             </BarChart>
           </ResponsiveContainer>
         </SectionCard>
       </Col>
       <Col xs={24} xl={12}>
-        <SectionCard title="Nhap xuat theo thang">
+        <SectionCard
+          title="Nhập xuất theo tháng"
+          subtitle="Tổng biến động tăng/giảm tồn kho từ movement history theo từng tháng."
+        >
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={stockMovement}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
               <Tooltip />
-              <Bar dataKey="import_quantity" fill="#1f6f5f" />
-              <Bar dataKey="export_quantity" fill="#d49727" />
+              <Bar dataKey="import_quantity" name="Nhập/tăng tồn" fill={chartColors.success} />
+              <Bar dataKey="export_quantity" name="Xuất/giảm tồn" fill={chartColors.warning} />
             </BarChart>
           </ResponsiveContainer>
         </SectionCard>
       </Col>
       <Col xs={24} xl={12}>
-        <SectionCard title="Ty le van don">
+        <SectionCard
+          title="Trạng thái vận chuyển"
+          subtitle="Tỷ lệ shipment theo trạng thái hiện tại để demo luồng giao hàng."
+        >
           <ResponsiveContainer width="100%" height={280}>
             <PieChart>
-              <Pie data={shipmentPerformance} dataKey="count" nameKey="status" outerRadius={100} fill="#2d8470" label />
+              <Pie
+                data={shipmentPerformance}
+                dataKey="count"
+                nameKey="status_label"
+                outerRadius={100}
+                fill={chartColors.teal}
+                label
+              />
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
         </SectionCard>
       </Col>
       <Col xs={24} xl={12}>
-        <SectionCard title="Doanh thu">
+        <SectionCard
+          title="Doanh thu hóa đơn"
+          subtitle="Tổng giá trị hóa đơn theo tháng, phục vụ câu chuyện demo Module 8."
+        >
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={revenue}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
               <Tooltip formatter={(value) => formatCurrency(value)} />
-              <Bar dataKey="revenue" fill="#b86a3d" />
+              <Bar dataKey="revenue" name="Doanh thu" fill={chartColors.danger} />
             </BarChart>
           </ResponsiveContainer>
         </SectionCard>
       </Col>
       <Col span={24}>
-        <SectionCard title="Top hang hoa va thanh toan">
+        <SectionCard
+          title="Top hàng hóa và thanh toán"
+          subtitle="Bảng tóm tắt sản phẩm xuất nhiều nhất và trạng thái thu tiền của hóa đơn."
+        >
           <Row gutter={[16, 16]}>
             <Col xs={24} xl={14}>
               <Table
@@ -96,8 +137,8 @@ function ReportsPage() {
                 dataSource={topProducts}
                 pagination={false}
                 columns={[
-                  { title: 'San pham', dataIndex: 'product_name' },
-                  { title: 'So luong xuat', dataIndex: 'quantity' },
+                  { title: 'Sản phẩm', dataIndex: 'product_name' },
+                  { title: 'Số lượng xuất', dataIndex: 'quantity' },
                 ]}
               />
             </Col>
@@ -107,8 +148,12 @@ function ReportsPage() {
                 dataSource={paymentStatus}
                 pagination={false}
                 columns={[
-                  { title: 'Trang thai', dataIndex: 'status' },
-                  { title: 'So hoa don', dataIndex: 'count' },
+                  {
+                    title: 'Trạng thái',
+                    dataIndex: 'status',
+                    render: (value) => getPaymentStatusLabel(value),
+                  },
+                  { title: 'Số hóa đơn', dataIndex: 'count' },
                 ]}
               />
             </Col>
