@@ -1,6 +1,7 @@
 from .catalogs import catalogs_bp
 from .auth import auth_bp
 from .communications import communications_bp
+from .chat import chat_bp
 from .export_receipts import export_receipts_bp
 from .import_receipts import import_receipts_bp
 from .insights import insights_bp
@@ -20,6 +21,7 @@ from .warehouses import warehouses_bp
 def register_blueprints(app):
     app.register_blueprint(auth_bp)
     app.register_blueprint(catalogs_bp)
+    app.register_blueprint(chat_bp)
     app.register_blueprint(communications_bp)
     app.register_blueprint(export_receipts_bp)
     app.register_blueprint(import_receipts_bp)

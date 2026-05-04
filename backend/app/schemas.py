@@ -319,6 +319,14 @@ class TaskStatusSchema(Schema):
     )
 
 
+class ChatDirectConversationSchema(Schema):
+    user_id = fields.Integer(required=True)
+
+
+class ChatMessageSchema(Schema):
+    content = fields.String(required=True, validate=validate.Length(min=1, max=1000))
+
+
 class StockTransferItemSchema(Schema):
     product_id = fields.Integer(required=True)
     source_location_id = fields.Integer(required=True)

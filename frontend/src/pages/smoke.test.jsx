@@ -8,6 +8,7 @@ import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/ProtectedRoute';
 import AuditLogsPage from './AuditLogsPage';
 import CatalogsPage from './CatalogsPage';
+import ChatPage from './ChatPage';
 import DelegationPage from './DelegationPage';
 import EmployeesPage from './EmployeesPage';
 import ExportReceiptsPage from './ExportReceiptsPage';
@@ -58,6 +59,7 @@ const adminPermissions = [
   'products.view',
   'products.manage',
   'reports.view',
+  'chat.view',
   'categories.view',
   'categories.manage',
   'suppliers.view',
@@ -97,6 +99,7 @@ const managerPermissions = [
   'products.view',
   'products.manage',
   'reports.view',
+  'chat.view',
   'categories.view',
   'categories.manage',
   'suppliers.view',
@@ -115,6 +118,7 @@ const accountantPermissions = [
   'invoices.manage',
   'notifications.view',
   'reports.view',
+  'chat.view',
   'tasks.view',
 ];
 
@@ -135,6 +139,7 @@ const staffPermissions = [
   'warehouses.view',
   'locations.view',
   'products.view',
+  'chat.view',
 ];
 
 const shipperPermissions = [
@@ -143,6 +148,7 @@ const shipperPermissions = [
   'shipments.view',
   'shipments.manage',
   'tasks.view',
+  'chat.view',
 ];
 
 function buildAuthState(overrides = {}) {
@@ -190,6 +196,75 @@ vi.mock('../api/client', () => ({
                 full_name: 'Accountant User',
                 role_name: 'accountant',
                 status: 'active',
+              },
+            ],
+          },
+        });
+      }
+
+      if (url === '/chat/users') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 3,
+                username: 'staff',
+                full_name: 'Staff User',
+                role_name: 'staff',
+                status: 'active',
+              },
+              {
+                id: 4,
+                username: 'accountant',
+                full_name: 'Accountant User',
+                role_name: 'accountant',
+                status: 'active',
+              },
+            ],
+          },
+        });
+      }
+
+      if (url === '/chat/conversations') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                conversation_type: 'direct',
+                peer: {
+                  id: 3,
+                  username: 'staff',
+                  full_name: 'Staff User',
+                  role_name: 'staff',
+                  status: 'active',
+                },
+                last_message: {
+                  id: 1,
+                  conversation_id: 1,
+                  sender_id: 2,
+                  sender_name: 'Manager User',
+                  content: 'Nhờ kiểm tra tồn thấp trước ca xuất hàng.',
+                  sent_at: '2026-05-02T08:10:00',
+                },
+                updated_at: '2026-05-02T08:10:00',
+              },
+            ],
+          },
+        });
+      }
+
+      if (url === '/chat/conversations/1/messages') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                conversation_id: 1,
+                sender_id: 2,
+                sender_name: 'Manager User',
+                content: 'Nhờ kiểm tra tồn thấp trước ca xuất hàng.',
+                sent_at: '2026-05-02T08:10:00',
               },
             ],
           },
@@ -1807,6 +1882,16 @@ test('renders reports page with business summary charts', async () => {
   await waitFor(() => expect(screen.getByText(/Máy quét mã vạch/i)).toBeInTheDocument());
   expect(screen.getByText(/Chưa thanh toán/i)).toBeInTheDocument();
   expect(screen.getByText(/Đã thanh toán/i)).toBeInTheDocument();
+});
+
+test('renders chat page with direct conversation and send action', async () => {
+  renderWithProviders(<ChatPage />, '/chat');
+
+  await waitFor(() => expect(screen.getByText(/Chat nội bộ/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getAllByText(/Staff User/i).length).toBeGreaterThan(0));
+  expect(screen.getByText(/Nhờ kiểm tra tồn thấp/i)).toBeInTheDocument();
+  expect(screen.getByPlaceholderText(/Nhập nội dung cần trao đổi/i)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Gửi tin/i })).toBeInTheDocument();
 });
 
 test('renders notifications page with tasks and notification actions', async () => {

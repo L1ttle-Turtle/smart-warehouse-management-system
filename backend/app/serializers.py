@@ -3,6 +3,7 @@ from .models import (
     AuditLog,
     BankAccount,
     Category,
+    Conversation,
     Customer,
     Employee,
     ExportReceipt,
@@ -14,6 +15,7 @@ from .models import (
     ImportReceipt,
     ImportReceiptDetail,
     InternalTask,
+    Message,
     Payment,
     Product,
     Role,
@@ -513,6 +515,38 @@ def serialize_task(task: InternalTask):
         "cancelled_at": task.cancelled_at.isoformat() if task.cancelled_at else None,
         "created_at": task.created_at.isoformat() if task.created_at else None,
         "updated_at": task.updated_at.isoformat() if task.updated_at else None,
+    }
+
+
+def serialize_chat_message(message: Message):
+    return {
+        "id": message.id,
+        "conversation_id": message.conversation_id,
+        "sender_id": message.sender_id,
+        "sender_name": message.sender.full_name if message.sender else None,
+        "content": message.content,
+        "sent_at": message.sent_at.isoformat() if message.sent_at else None,
+        "created_at": message.created_at.isoformat() if message.created_at else None,
+        "updated_at": message.updated_at.isoformat() if message.updated_at else None,
+    }
+
+
+def serialize_chat_conversation(conversation: Conversation, current_user_id: int):
+    peer = None
+    for participant in conversation.participants:
+        if participant.user_id != current_user_id:
+            peer = participant.user
+            break
+
+    last_message = conversation.messages[-1] if conversation.messages else None
+    return {
+        "id": conversation.id,
+        "conversation_type": conversation.conversation_type,
+        "participant_ids": [participant.user_id for participant in conversation.participants],
+        "peer": serialize_user_summary(peer) if peer else None,
+        "last_message": serialize_chat_message(last_message) if last_message else None,
+        "created_at": conversation.created_at.isoformat() if conversation.created_at else None,
+        "updated_at": conversation.updated_at.isoformat() if conversation.updated_at else None,
     }
 
 

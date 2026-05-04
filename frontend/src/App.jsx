@@ -8,6 +8,7 @@ import { useAuth } from './auth/useAuth';
 
 const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage'));
 const CatalogsPage = lazy(() => import('./pages/CatalogsPage'));
+const ChatPage = lazy(() => import('./pages/ChatPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const DelegationPage = lazy(() => import('./pages/DelegationPage'));
 const EmployeesPage = lazy(() => import('./pages/EmployeesPage'));
@@ -184,6 +185,14 @@ function App() {
             element={(
               <ProtectedRoute requiredPermission="reports.view">
                 <ReportsPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="chat"
+            element={(
+              <ProtectedRoute requiredPermission="chat.view">
+                <ChatPage />
               </ProtectedRoute>
             )}
           />

@@ -4,6 +4,7 @@ RESOURCE_PERMISSIONS = {
     "bank_accounts.view",
     "categories.manage",
     "categories.view",
+    "chat.view",
     "customers.manage",
     "customers.view",
     "dashboard.view",
@@ -55,6 +56,7 @@ ROLE_PERMISSION_MAP = {
         "bank_accounts.view",
         "categories.manage",
         "categories.view",
+        "chat.view",
         "customers.manage",
         "customers.view",
         "dashboard.view",
@@ -94,6 +96,7 @@ ROLE_PERMISSION_MAP = {
         "audit_logs.view",
         "categories.manage",
         "categories.view",
+        "chat.view",
         "customers.manage",
         "customers.view",
         "dashboard.view",
@@ -127,6 +130,7 @@ ROLE_PERMISSION_MAP = {
         "warehouses.view",
     ],
     "staff": [
+        "chat.view",
         "dashboard.view",
         "export_receipts.manage",
         "export_receipts.view",
@@ -147,6 +151,7 @@ ROLE_PERMISSION_MAP = {
     "accountant": [
         "bank_accounts.manage",
         "bank_accounts.view",
+        "chat.view",
         "customers.manage",
         "customers.view",
         "dashboard.view",
@@ -157,6 +162,7 @@ ROLE_PERMISSION_MAP = {
         "tasks.view",
     ],
     "shipper": [
+        "chat.view",
         "dashboard.view",
         "notifications.view",
         "shipments.manage",

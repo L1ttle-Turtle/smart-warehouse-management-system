@@ -19,7 +19,7 @@ function ChatPage() {
 
   const fetchConversations = useCallback(async () => {
     const [userResponse, conversationResponse] = await Promise.all([
-      api.get('/directory/users'),
+      api.get('/chat/users'),
       api.get('/chat/conversations'),
     ]);
     setUsers((userResponse.data.items || []).filter((item) => item.id !== user?.id));
@@ -35,7 +35,7 @@ function ChatPage() {
 
   useEffect(() => {
     fetchConversations().catch((error) => {
-      message.error(error.response?.data?.message || 'Khong tai duoc chat.');
+      message.error(error.response?.data?.message || 'Không tải được danh sách chat.');
     });
   }, [fetchConversations]);
 
@@ -47,7 +47,7 @@ function ChatPage() {
     api.get(`/chat/conversations/${conversationId}/messages`)
       .then((response) => setMessages(response.data.items || []))
       .catch((error) => {
-        message.error(error.response?.data?.message || 'Khong tai duoc tin nhan.');
+        message.error(error.response?.data?.message || 'Không tải được tin nhắn.');
       })
       .finally(() => setLoading(false));
   }, [conversationId]);
@@ -71,26 +71,29 @@ function ChatPage() {
   }, [socket]);
 
   const availableUsers = useMemo(
-    () => users.filter((entry) => !conversations.some((conversation) => conversation.peer?.user_id === entry.id)),
+    () => users.filter((entry) => !conversations.some((conversation) => conversation.peer?.id === entry.id)),
     [users, conversations],
   );
 
   return (
     <SectionCard
-      title="Chat noi bo"
-      subtitle="Trao doi 1-1 theo thoi gian thuc de xu ly kho, van don va cong viec."
+      title="Chat nội bộ"
+      subtitle="Trao đổi 1-1 nhanh giữa các nhân sự để xử lý kho, vận đơn và công việc hằng ngày."
       extra={(
         <Select
           style={{ width: 280 }}
-          placeholder="Bat dau chat voi..."
-          options={availableUsers.map((entry) => ({ label: `${entry.full_name} (${entry.role})`, value: entry.id }))}
+          placeholder="Bắt đầu chat với..."
+          options={availableUsers.map((entry) => ({
+            label: `${entry.full_name} (${entry.role_name || 'Chưa có vai trò'})`,
+            value: entry.id,
+          }))}
           onChange={async (userId) => {
             try {
               const response = await api.post('/chat/conversations/direct', { user_id: userId });
               await fetchConversations();
               setSelectedConversation(response.data.item);
             } catch (error) {
-              message.error(error.response?.data?.message || 'Khong tao duoc cuoc tro chuyen.');
+              message.error(error.response?.data?.message || 'Không tạo được cuộc trò chuyện.');
             }
           }}
         />
@@ -105,13 +108,13 @@ function ChatPage() {
                 style={{
                   cursor: 'pointer',
                   paddingInline: 18,
-                  background: selectedConversation?.id === item.id ? 'rgba(31, 111, 95, 0.08)' : 'transparent',
+                  background: selectedConversation?.id === item.id ? 'rgba(124, 58, 237, 0.08)' : 'transparent',
                 }}
                 onClick={() => setSelectedConversation(item)}
               >
                 <List.Item.Meta
-                  title={item.peer?.full_name || 'Conversation'}
-                  description={item.last_message?.content || 'Chua co tin nhan'}
+                  title={item.peer?.full_name || 'Cuộc trò chuyện'}
+                  description={item.last_message?.content || 'Chưa có tin nhắn'}
                 />
               </List.Item>
             )}
@@ -123,10 +126,10 @@ function ChatPage() {
             <Space orientation="vertical" size={16} style={{ width: '100%' }}>
               <div>
                 <Typography.Title level={4} style={{ marginBottom: 0 }}>
-                  {selectedConversation.peer?.full_name || 'Conversation'}
+                  {selectedConversation.peer?.full_name || 'Cuộc trò chuyện'}
                 </Typography.Title>
                 <Typography.Text type="secondary">
-                  {selectedConversation.peer?.role || 'No role'}
+                  {selectedConversation.peer?.role_name || 'Chưa có vai trò'}
                 </Typography.Text>
               </div>
 
@@ -149,29 +152,34 @@ function ChatPage() {
                 rows={4}
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
-                placeholder="Nhap noi dung can trao doi..."
+                placeholder="Nhập nội dung cần trao đổi..."
               />
               <Button
                 type="primary"
                 icon={<SendOutlined />}
                 onClick={async () => {
                   if (!draft.trim()) {
+                    message.warning('Vui lòng nhập nội dung tin nhắn.');
                     return;
                   }
                   try {
-                    await api.post(`/chat/conversations/${selectedConversation.id}/messages`, { content: draft });
+                    const response = await api.post(
+                      `/chat/conversations/${selectedConversation.id}/messages`,
+                      { content: draft },
+                    );
+                    setMessages((current) => [...current, response.data.item]);
                     setDraft('');
                     fetchConversations();
                   } catch (error) {
-                    message.error(error.response?.data?.message || 'Khong gui duoc tin nhan.');
+                    message.error(error.response?.data?.message || 'Không gửi được tin nhắn.');
                   }
                 }}
               >
-                Gui tin
+                Gửi tin
               </Button>
             </Space>
           ) : (
-            <Typography.Text type="secondary">Chon mot cuoc tro chuyen de bat dau.</Typography.Text>
+            <Typography.Text type="secondary">Chọn một cuộc trò chuyện để bắt đầu.</Typography.Text>
           )}
         </Card>
       </div>

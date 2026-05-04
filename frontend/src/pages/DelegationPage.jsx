@@ -51,6 +51,7 @@ const PERMISSION_LABELS = {
   'employees.manage': 'Quản lý nhân sự',
   'categories.view': 'Xem nhóm hàng',
   'categories.manage': 'Quản lý nhóm hàng',
+  'chat.view': 'Sử dụng chat nội bộ',
   'suppliers.view': 'Xem nhà cung cấp',
   'suppliers.manage': 'Quản lý nhà cung cấp',
   'customers.view': 'Xem khách hàng',

@@ -5,6 +5,8 @@ from .extensions import db
 from .models import (
     BankAccount,
     Category,
+    Conversation,
+    ConversationParticipant,
     Customer,
     Employee,
     ExportReceipt,
@@ -16,6 +18,7 @@ from .models import (
     ImportReceipt,
     ImportReceiptDetail,
     InternalTask,
+    Message,
     Permission,
     Notification,
     Product,
@@ -923,6 +926,48 @@ def seed_tasks_notifications_demo():
     db.session.add_all(notifications)
 
 
+def seed_chat_demo():
+    manager_user = User.query.filter_by(username="manager").first()
+    staff_user = User.query.filter_by(username="staff").first()
+    if not manager_user or not staff_user:
+        return
+
+    existing_conversation = (
+        Conversation.query.join(ConversationParticipant)
+        .filter(ConversationParticipant.user_id == manager_user.id)
+        .all()
+    )
+    for conversation in existing_conversation:
+        participant_ids = {participant.user_id for participant in conversation.participants}
+        if participant_ids == {manager_user.id, staff_user.id}:
+            return
+
+    conversation = Conversation(conversation_type="direct")
+    conversation.participants = [
+        ConversationParticipant(user_id=manager_user.id),
+        ConversationParticipant(user_id=staff_user.id),
+    ]
+    db.session.add(conversation)
+    db.session.flush()
+
+    db.session.add_all(
+        [
+            Message(
+                conversation_id=conversation.id,
+                sender_id=manager_user.id,
+                content="Nhờ bạn kiểm tra nhanh các dòng tồn thấp trước ca xuất hàng chiều.",
+                sent_at=utc_now(),
+            ),
+            Message(
+                conversation_id=conversation.id,
+                sender_id=staff_user.id,
+                content="Em đã nhận, sẽ đối chiếu ở màn Tồn kho và phản hồi lại sau khi kiểm kê.",
+                sent_at=utc_now(),
+            ),
+        ]
+    )
+
+
 def seed_all():
     seed_roles_and_permissions()
     seed_default_users()
@@ -936,4 +981,5 @@ def seed_all():
     seed_shipment_demo()
     seed_invoice_demo()
     seed_tasks_notifications_demo()
+    seed_chat_demo()
     db.session.commit()

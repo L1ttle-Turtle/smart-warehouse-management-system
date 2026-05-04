@@ -558,6 +558,54 @@ class InternalTask(db.Model, SerializerMixin, TimestampMixin):
     creator = db.relationship("User", foreign_keys=[created_by])
 
 
+class Conversation(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "conversations"
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_type = db.Column(db.String(20), default="direct", nullable=False)
+
+    participants = db.relationship(
+        "ConversationParticipant",
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+        order_by="ConversationParticipant.id",
+    )
+    messages = db.relationship(
+        "Message",
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+        order_by="Message.sent_at",
+    )
+
+
+class ConversationParticipant(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "conversation_participants"
+    __table_args__ = (
+        db.UniqueConstraint("conversation_id", "user_id", name="uq_conversation_user"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey("conversations.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    last_read_at = db.Column(db.DateTime)
+
+    conversation = db.relationship("Conversation", back_populates="participants")
+    user = db.relationship("User", foreign_keys=[user_id])
+
+
+class Message(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "messages"
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey("conversations.id"), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    content = db.Column(db.String(1000), nullable=False)
+    sent_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+
+    conversation = db.relationship("Conversation", back_populates="messages")
+    sender = db.relationship("User", foreign_keys=[sender_id])
+
+
 class StockTransfer(db.Model, SerializerMixin, TimestampMixin):
     __tablename__ = "stock_transfers"
 
