@@ -12,8 +12,11 @@ from ..models import (
     Inventory,
     InventoryMovement,
     Invoice,
+    Payment,
     Product,
     Shipment,
+    Stocktake,
+    StockTransfer,
     Warehouse,
 )
 from ..permissions import permission_required
@@ -45,6 +48,95 @@ def dashboard():
                 "low_stock_products": low_stock,
                 "invoices": Invoice.query.count(),
             }
+        }
+    )
+
+
+@reports_bp.get("/summary")
+@jwt_required()
+@permission_required("reports.view")
+def summary():
+    inventory_rows = Inventory.query.all()
+    total_inventory_quantity = sum(row.quantity for row in inventory_rows)
+    low_stock_lines = 0
+    out_of_stock_lines = 0
+    for row in inventory_rows:
+        quantity = float(row.quantity or 0)
+        min_stock = float(row.product.min_stock or 0) if row.product else 0
+        if quantity <= 0:
+            out_of_stock_lines += 1
+        elif quantity <= min_stock:
+            low_stock_lines += 1
+
+    draft_documents = (
+        ImportReceipt.query.filter_by(status="draft").count()
+        + ExportReceipt.query.filter_by(status="draft").count()
+        + StockTransfer.query.filter_by(status="draft").count()
+        + Stocktake.query.filter_by(status="draft").count()
+    )
+    active_shipments = Shipment.query.filter(Shipment.status.in_(["assigned", "in_transit"])).count()
+    total_revenue = sum(float(invoice.total_amount or 0) for invoice in Invoice.query.all())
+    paid_amount = sum(float(payment.amount or 0) for payment in Payment.query.all())
+    outstanding_amount = max(total_revenue - paid_amount, 0)
+
+    metrics = [
+        {
+            "key": "total_inventory_quantity",
+            "label": "Tổng tồn kho",
+            "value": total_inventory_quantity,
+            "suffix": "đơn vị",
+            "tone": "primary",
+        },
+        {
+            "key": "stock_alert_lines",
+            "label": "Dòng tồn cần chú ý",
+            "value": low_stock_lines + out_of_stock_lines,
+            "suffix": "dòng",
+            "tone": "warning",
+        },
+        {
+            "key": "draft_documents",
+            "label": "Chứng từ nháp",
+            "value": draft_documents,
+            "suffix": "phiếu",
+            "tone": "teal",
+        },
+        {
+            "key": "active_shipments",
+            "label": "Đơn đang giao",
+            "value": active_shipments,
+            "suffix": "đơn",
+            "tone": "success",
+        },
+        {
+            "key": "total_revenue",
+            "label": "Doanh thu hóa đơn",
+            "value": total_revenue,
+            "format": "currency",
+            "tone": "danger",
+        },
+        {
+            "key": "outstanding_amount",
+            "label": "Công nợ còn lại",
+            "value": outstanding_amount,
+            "format": "currency",
+            "tone": "warning",
+        },
+    ]
+
+    return jsonify(
+        {
+            "metrics": metrics,
+            "summary": {
+                "total_inventory_quantity": total_inventory_quantity,
+                "low_stock_lines": low_stock_lines,
+                "out_of_stock_lines": out_of_stock_lines,
+                "draft_documents": draft_documents,
+                "active_shipments": active_shipments,
+                "total_revenue": total_revenue,
+                "paid_amount": paid_amount,
+                "outstanding_amount": outstanding_amount,
+            },
         }
     )
 

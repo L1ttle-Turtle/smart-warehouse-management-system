@@ -322,6 +322,57 @@ vi.mock('../api/client', () => ({
         });
       }
 
+      if (url === '/reports/summary') {
+        return Promise.resolve({
+          data: {
+            metrics: [
+              {
+                key: 'total_inventory_quantity',
+                label: 'Tổng tồn kho',
+                value: 314,
+                suffix: 'đơn vị',
+                tone: 'primary',
+              },
+              {
+                key: 'stock_alert_lines',
+                label: 'Dòng tồn cần chú ý',
+                value: 3,
+                suffix: 'dòng',
+                tone: 'warning',
+              },
+              {
+                key: 'draft_documents',
+                label: 'Chứng từ nháp',
+                value: 4,
+                suffix: 'phiếu',
+                tone: 'teal',
+              },
+              {
+                key: 'active_shipments',
+                label: 'Đơn đang giao',
+                value: 1,
+                suffix: 'đơn',
+                tone: 'success',
+              },
+              {
+                key: 'total_revenue',
+                label: 'Doanh thu hóa đơn',
+                value: 4200000,
+                format: 'currency',
+                tone: 'danger',
+              },
+              {
+                key: 'outstanding_amount',
+                label: 'Công nợ còn lại',
+                value: 1200000,
+                format: 'currency',
+                tone: 'warning',
+              },
+            ],
+          },
+        });
+      }
+
       if (url === '/reports/inventory-by-warehouse') {
         return Promise.resolve({
           data: {
@@ -1875,10 +1926,14 @@ test('accountant can render invoices page for demo review', async () => {
 test('renders reports page with business summary charts', async () => {
   renderWithProviders(<ReportsPage />, '/reports');
 
+  await waitFor(() => expect(screen.getByText(/Tổng quan điều hành/i)).toBeInTheDocument());
+  expect(screen.getByText(/Tổng tồn kho/i)).toBeInTheDocument();
+  expect(screen.getByText(/Dòng tồn cần chú ý/i)).toBeInTheDocument();
+  expect(screen.getByText(/Công nợ còn lại/i)).toBeInTheDocument();
   await waitFor(() => expect(screen.getByText(/Tồn kho theo kho/i)).toBeInTheDocument());
   expect(screen.getByText(/Nhập xuất theo tháng/i)).toBeInTheDocument();
   expect(screen.getByText(/Trạng thái vận chuyển/i)).toBeInTheDocument();
-  expect(screen.getByText(/Doanh thu hóa đơn/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/Doanh thu hóa đơn/i).length).toBeGreaterThan(0);
   await waitFor(() => expect(screen.getByText(/Máy quét mã vạch/i)).toBeInTheDocument());
   expect(screen.getByText(/Chưa thanh toán/i)).toBeInTheDocument();
   expect(screen.getByText(/Đã thanh toán/i)).toBeInTheDocument();

@@ -5,7 +5,7 @@
 - Đã bật Module 10 mức tối thiểu cho demo: chat nội bộ 1-1 qua REST API và frontend route `/chat`.
 - Chat hiện hỗ trợ xem danh sách user có thể nhắn, tạo cuộc trò chuyện trực tiếp, xem lịch sử tin nhắn và gửi tin nhắn mới có lưu database.
 - Đã bật Module 11 mức tối thiểu cho demo: backend `/reports/*` và frontend route `/reports`.
-- Trang báo cáo hiện có các lát cắt: tồn kho theo kho, nhập/xuất theo tháng, trạng thái vận chuyển, doanh thu hóa đơn, top hàng hóa và trạng thái thanh toán.
+- Trang báo cáo hiện có KPI tổng quan điều hành và các lát cắt: tồn kho theo kho, nhập/xuất theo tháng, trạng thái vận chuyển, doanh thu hóa đơn, top hàng hóa và trạng thái thanh toán.
 - Đã sửa route reports để dùng đúng model hiện tại: `Shipment.status`, `Invoice.status`, `Invoice.total_amount`.
 
 Hệ thống quản lý kho hàng thông minh cho doanh nghiệp vừa và nhỏ, phát triển theo hướng đồ án tốt nghiệp nhưng ưu tiên khả năng chạy thật, test được và demo được theo từng module.
@@ -131,7 +131,7 @@ Luồng dữ liệu chính:
 | Module 8 - Hóa đơn và thanh toán | Đang triển khai mức tối thiểu | Đã có invoice backend, payment thủ công backend + UI trong `/invoices`; đối soát ngân hàng chưa làm |
 | Module 9 - Thông báo và công việc | Đang triển khai mức tối thiểu | Task nội bộ, notification in-app, route `/notifications`; chưa có realtime notification |
 | Module 10 - Chat nội bộ | Đang triển khai mức tối thiểu | Chat 1-1 qua REST API, route `/chat`, có seed conversation demo; chưa làm chat nhóm |
-| Module 11 - Dashboard và báo cáo nghiệp vụ | Đang triển khai mức tối thiểu | Route `/reports` với báo cáo tồn kho, nhập/xuất, vận chuyển, doanh thu và top sản phẩm |
+| Module 11 - Dashboard và báo cáo nghiệp vụ | Đang triển khai mức tối thiểu | Route `/reports` với KPI tổng quan, báo cáo tồn kho, nhập/xuất, vận chuyển, doanh thu và top sản phẩm |
 
 ## 6. Những gì đã hoàn thành theo module
 
@@ -623,6 +623,7 @@ Mỗi resource hỗ trợ:
 
 ### Reports
 
+- `GET /reports/summary`
 - `GET /reports/inventory-by-warehouse`
 - `GET /reports/stock-movement`
 - `GET /reports/top-products`
@@ -983,7 +984,7 @@ Thứ tự tiếp theo an toàn nhất cho project:
    - notification in-app
 4. Module 10 và 11 đã mở mức tối thiểu:
    - chat nội bộ 1-1
-   - dashboard/báo cáo demo
+   - dashboard/báo cáo demo có KPI tổng quan điều hành
 5. Sau khi flow nghiệp vụ đủ dày mới quay lại harden tiếp:
    - token revocation
    - rate limiting

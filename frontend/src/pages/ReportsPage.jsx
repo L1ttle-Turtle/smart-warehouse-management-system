@@ -1,10 +1,10 @@
-import { Col, Row, Table, message } from 'antd';
+import { Card, Col, Row, Statistic, Table, Tag, message } from 'antd';
 import { Bar, BarChart, CartesianGrid, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useEffect, useState } from 'react';
 
 import api from '../api/client';
 import SectionCard from '../components/SectionCard';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, formatNumber } from '../utils/format';
 
 const chartColors = {
   primary: '#7c3aed',
@@ -21,11 +21,27 @@ const paymentStatusLabels = {
   cancelled: 'Đã hủy',
 };
 
+const metricColors = {
+  primary: chartColors.primary,
+  success: chartColors.success,
+  warning: chartColors.warning,
+  danger: chartColors.danger,
+  teal: chartColors.teal,
+};
+
 function getPaymentStatusLabel(status) {
   return paymentStatusLabels[status] || status || '-';
 }
 
+function formatMetricValue(metric) {
+  if (metric.format === 'currency') {
+    return formatCurrency(metric.value);
+  }
+  return `${formatNumber(metric.value)}${metric.suffix ? ` ${metric.suffix}` : ''}`;
+}
+
 function ReportsPage() {
+  const [summaryMetrics, setSummaryMetrics] = useState([]);
   const [inventoryData, setInventoryData] = useState([]);
   const [stockMovement, setStockMovement] = useState([]);
   const [topProducts, setTopProducts] = useState([]);
@@ -35,13 +51,15 @@ function ReportsPage() {
 
   useEffect(() => {
     Promise.all([
+      api.get('/reports/summary'),
       api.get('/reports/inventory-by-warehouse'),
       api.get('/reports/stock-movement'),
       api.get('/reports/top-products'),
       api.get('/reports/shipment-performance'),
       api.get('/reports/revenue'),
     ])
-      .then(([inventoryResponse, stockResponse, topResponse, shipmentResponse, revenueResponse]) => {
+      .then(([summaryResponse, inventoryResponse, stockResponse, topResponse, shipmentResponse, revenueResponse]) => {
+        setSummaryMetrics(summaryResponse.data.metrics || []);
         setInventoryData(inventoryResponse.data.items || []);
         setStockMovement(stockResponse.data.items || []);
         setTopProducts(topResponse.data.items || []);
@@ -56,6 +74,41 @@ function ReportsPage() {
 
   return (
     <Row gutter={[16, 16]}>
+      <Col span={24}>
+        <SectionCard
+          title="Tổng quan điều hành"
+          subtitle="Các KPI chính giúp giảng viên nhìn ngay tình trạng kho, vận hành và doanh thu trước khi xem biểu đồ chi tiết."
+        >
+          <Row gutter={[16, 16]}>
+            {summaryMetrics.map((metric) => (
+              <Col xs={24} sm={12} lg={8} xxl={4} key={metric.key}>
+                <Card className="page-card" styles={{ body: { minHeight: 126 } }}>
+                  <Statistic
+                    title={(
+                      <span>
+                        {metric.label}
+                        <Tag
+                          color={metricColors[metric.tone] || metricColors.primary}
+                          style={{ marginInlineStart: 8 }}
+                        >
+                          KPI
+                        </Tag>
+                      </span>
+                    )}
+                    value={formatMetricValue(metric)}
+                    styles={{
+                      content: {
+                        color: metricColors[metric.tone] || metricColors.primary,
+                        fontSize: 24,
+                      },
+                    }}
+                  />
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        </SectionCard>
+      </Col>
       <Col xs={24} xl={12}>
         <SectionCard
           title="Tồn kho theo kho"
