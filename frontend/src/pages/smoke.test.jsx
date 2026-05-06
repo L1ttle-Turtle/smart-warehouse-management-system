@@ -4,6 +4,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import api from '../api/client';
+import App from '../App';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/ProtectedRoute';
 import AuditLogsPage from './AuditLogsPage';
@@ -150,6 +151,155 @@ const shipperPermissions = [
   'tasks.view',
   'chat.view',
 ];
+
+const demoRoleProfiles = {
+  admin: {
+    id: 1,
+    full_name: 'Admin User',
+    role: 'admin',
+    permissions: adminPermissions,
+    visibleMenus: [
+      'Dashboard cá nhân',
+      'Tài khoản',
+      'Nhân sự',
+      'Sản phẩm',
+      'Kho bãi',
+      'Nhập kho',
+      'Xuất kho',
+      'Điều chuyển kho',
+      'Vận chuyển',
+      'Hóa đơn',
+      'Công việc & thông báo',
+      'Báo cáo',
+      'Chat nội bộ',
+      'Tồn kho',
+      'Kiểm kê kho',
+      'Danh mục nền',
+      'Ủy quyền quyền hạn',
+      'Audit log',
+      'Vai trò và quyền',
+      'Hồ sơ cá nhân',
+    ],
+    hiddenMenus: [],
+  },
+  manager: {
+    id: 2,
+    full_name: 'Manager User',
+    role: 'manager',
+    permissions: managerPermissions,
+    visibleMenus: [
+      'Dashboard cá nhân',
+      'Nhân sự',
+      'Sản phẩm',
+      'Kho bãi',
+      'Nhập kho',
+      'Xuất kho',
+      'Điều chuyển kho',
+      'Vận chuyển',
+      'Hóa đơn',
+      'Công việc & thông báo',
+      'Báo cáo',
+      'Chat nội bộ',
+      'Tồn kho',
+      'Kiểm kê kho',
+      'Danh mục nền',
+      'Ủy quyền quyền hạn',
+      'Audit log',
+      'Hồ sơ cá nhân',
+    ],
+    hiddenMenus: ['Tài khoản', 'Vai trò và quyền'],
+  },
+  staff: {
+    id: 3,
+    full_name: 'Staff User',
+    role: 'staff',
+    permissions: staffPermissions,
+    visibleMenus: [
+      'Dashboard cá nhân',
+      'Sản phẩm',
+      'Kho bãi',
+      'Nhập kho',
+      'Xuất kho',
+      'Điều chuyển kho',
+      'Vận chuyển',
+      'Công việc & thông báo',
+      'Chat nội bộ',
+      'Tồn kho',
+      'Kiểm kê kho',
+      'Hồ sơ cá nhân',
+    ],
+    hiddenMenus: [
+      'Tài khoản',
+      'Nhân sự',
+      'Hóa đơn',
+      'Báo cáo',
+      'Danh mục nền',
+      'Ủy quyền quyền hạn',
+      'Audit log',
+      'Vai trò và quyền',
+    ],
+  },
+  accountant: {
+    id: 4,
+    full_name: 'Accountant User',
+    role: 'accountant',
+    permissions: accountantPermissions,
+    visibleMenus: [
+      'Dashboard cá nhân',
+      'Hóa đơn',
+      'Công việc & thông báo',
+      'Báo cáo',
+      'Chat nội bộ',
+      'Danh mục nền',
+      'Hồ sơ cá nhân',
+    ],
+    hiddenMenus: [
+      'Tài khoản',
+      'Nhân sự',
+      'Sản phẩm',
+      'Kho bãi',
+      'Nhập kho',
+      'Xuất kho',
+      'Điều chuyển kho',
+      'Vận chuyển',
+      'Tồn kho',
+      'Kiểm kê kho',
+      'Ủy quyền quyền hạn',
+      'Audit log',
+      'Vai trò và quyền',
+    ],
+  },
+  shipper: {
+    id: 5,
+    full_name: 'Shipper User',
+    role: 'shipper',
+    permissions: shipperPermissions,
+    visibleMenus: [
+      'Dashboard cá nhân',
+      'Vận chuyển',
+      'Công việc & thông báo',
+      'Chat nội bộ',
+      'Hồ sơ cá nhân',
+    ],
+    hiddenMenus: [
+      'Tài khoản',
+      'Nhân sự',
+      'Sản phẩm',
+      'Kho bãi',
+      'Nhập kho',
+      'Xuất kho',
+      'Điều chuyển kho',
+      'Hóa đơn',
+      'Báo cáo',
+      'Tồn kho',
+      'Kiểm kê kho',
+      'Danh mục nền',
+      'Ủy quyền quyền hạn',
+      'Audit log',
+      'Vai trò và quyền',
+    ],
+  },
+};
 
 function buildAuthState(overrides = {}) {
   const permissions = overrides.permissions || adminPermissions;
@@ -1472,6 +1622,37 @@ function renderWithProviders(node, route = '/') {
   );
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function exactText(value) {
+  return new RegExp(`^${escapeRegExp(value)}$`, 'i');
+}
+
+function setDemoRole(roleKey) {
+  const profile = demoRoleProfiles[roleKey];
+  authState = buildAuthState({
+    permissions: profile.permissions,
+    user: {
+      id: profile.id,
+      full_name: profile.full_name,
+      role: profile.role,
+    },
+  });
+}
+
+function renderDemoShell(roleKey) {
+  setDemoRole(roleKey);
+  return renderWithProviders(
+    <Routes>
+      <Route path="/" element={<AppShell />}>
+        <Route index element={<div>Dashboard</div>} />
+      </Route>
+    </Routes>,
+  );
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   authState = buildAuthState();
@@ -1509,6 +1690,69 @@ test('filters navigation items by permission', () => {
   expect(screen.getByText(/^Audit log$/i)).toBeInTheDocument();
   expect(screen.queryByText(/^Tài khoản$/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/^Vai trò và quyền$/i)).not.toBeInTheDocument();
+});
+
+test('demo role sidebars match the accepted navigation narrative', () => {
+  Object.entries(demoRoleProfiles).forEach(([roleKey, profile]) => {
+    const view = renderDemoShell(roleKey);
+
+    profile.visibleMenus.forEach((label) => {
+      expect(screen.getByText(exactText(label))).toBeInTheDocument();
+    });
+
+    profile.hiddenMenus.forEach((label) => {
+      expect(screen.queryByText(exactText(label))).not.toBeInTheDocument();
+    });
+
+    view.unmount();
+  });
+});
+
+test('demo role routes allow intended screens and block out-of-scope screens', async () => {
+  const routeCases = [
+    {
+      role: 'admin',
+      allowed: { path: '/roles', text: /Ma trận vai trò và quyền/i },
+      forbidden: null,
+    },
+    {
+      role: 'manager',
+      allowed: { path: '/reports', text: /Tổng quan điều hành/i },
+      forbidden: '/users',
+    },
+    {
+      role: 'staff',
+      allowed: { path: '/inventory', text: /Tồn kho/i },
+      forbidden: '/reports',
+    },
+    {
+      role: 'accountant',
+      allowed: { path: '/invoices', text: /^Hóa đơn$/i },
+      forbidden: '/inventory',
+    },
+    {
+      role: 'shipper',
+      allowed: { path: '/shipments', text: /Vận chuyển/i },
+      forbidden: '/invoices',
+    },
+  ];
+
+  for (const routeCase of routeCases) {
+    setDemoRole(routeCase.role);
+    const allowedView = renderWithProviders(<App />, routeCase.allowed.path);
+    await waitFor(() => {
+      expect(screen.getAllByText(routeCase.allowed.text).length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByText(/^403$/i)).not.toBeInTheDocument();
+    allowedView.unmount();
+
+    if (routeCase.forbidden) {
+      setDemoRole(routeCase.role);
+      const forbiddenView = renderWithProviders(<App />, routeCase.forbidden);
+      await waitFor(() => expect(screen.getByText(/^403$/i)).toBeInTheDocument());
+      forbiddenView.unmount();
+    }
+  }
 });
 
 test('renders role matrix page', async () => {

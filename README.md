@@ -966,6 +966,7 @@ Các fix dưới đây được làm sau khi đối chiếu kết quả automati
 - Đã chặn user được ủy quyền `users.manage` sửa hoặc xóa tài khoản thuộc role cấp cao hơn phạm vi được phép quản lý.
 - Đã harden luồng `stock_transfers` để `update / cancel / confirm` phải claim phiếu nháp trong transaction trước khi mutate, giảm rủi ro race condition làm lệch metadata và movement tồn kho.
 - Đã siết validate `GET /inventory/movements`: `reference_id` không hợp lệ giờ trả `400` rõ ràng thay vì âm thầm mở rộng kết quả truy vấn.
+- Đã khóa smoke test sidebar/route theo 5 vai trò demo để giảm rủi ro giảng viên đăng nhập nhầm role và gặp menu hoặc màn hình ngoài phạm vi quyền.
 
 ## 19. Hướng đi tiếp theo được khuyến nghị
 
