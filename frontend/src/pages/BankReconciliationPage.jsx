@@ -407,6 +407,7 @@ function BankReconciliationPage() {
       <Modal
         title="Mô phỏng giao dịch ngân hàng"
         open={modalOpen}
+        forceRender
         okText="Lưu giao dịch"
         cancelText="Đóng"
         confirmLoading={submitting}
@@ -438,7 +439,7 @@ function BankReconciliationPage() {
             name="amount"
             rules={[{ required: true, message: 'Nhập số tiền giao dịch.' }]}
           >
-            <InputNumber min={1} style={{ width: '100%' }} addonAfter="VND" />
+            <InputNumber min={1} style={{ width: '100%' }} placeholder="Nhập số tiền VND" />
           </Form.Item>
           <Form.Item
             label="Nội dung chuyển khoản"

@@ -389,7 +389,7 @@ function DelegationPage() {
         <Alert
           type="error"
           showIcon
-          message="Không tải được dữ liệu trao quyền"
+          title="Không tải được dữ liệu trao quyền"
           description={error}
         />
       ) : null}

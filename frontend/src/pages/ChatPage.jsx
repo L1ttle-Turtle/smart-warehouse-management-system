@@ -1,5 +1,5 @@
 import { SendOutlined } from '@ant-design/icons';
-import { Button, Card, Input, List, Select, Space, Spin, Typography, message } from 'antd';
+import { Button, Card, Input, Select, Space, Spin, Typography, message } from 'antd';
 import { useCallback, useEffect, useEffectEvent, useMemo, useState } from 'react';
 
 import api from '../api/client';
@@ -101,24 +101,34 @@ function ChatPage() {
     >
       <div className="chat-shell">
         <Card className="page-card" styles={{ body: { padding: 0 } }}>
-          <List
-            dataSource={conversations}
-            renderItem={(item) => (
-              <List.Item
+          <Space orientation="vertical" size={0} style={{ width: '100%' }}>
+            {conversations.length ? conversations.map((item) => (
+              <button
+                key={item.id}
+                type="button"
                 style={{
+                  width: '100%',
                   cursor: 'pointer',
-                  paddingInline: 18,
+                  padding: '14px 18px',
+                  textAlign: 'left',
+                  border: 0,
+                  borderBottom: '1px solid rgba(15, 23, 42, 0.08)',
                   background: selectedConversation?.id === item.id ? 'rgba(124, 58, 237, 0.08)' : 'transparent',
                 }}
                 onClick={() => setSelectedConversation(item)}
               >
-                <List.Item.Meta
-                  title={item.peer?.full_name || 'Cuộc trò chuyện'}
-                  description={item.last_message?.content || 'Chưa có tin nhắn'}
-                />
-              </List.Item>
+                <Typography.Text strong>{item.peer?.full_name || 'Cuộc trò chuyện'}</Typography.Text>
+                <br />
+                <Typography.Text type="secondary">
+                  {item.last_message?.content || 'Chưa có tin nhắn'}
+                </Typography.Text>
+              </button>
+            )) : (
+              <Typography.Text type="secondary" style={{ display: 'block', padding: 18 }}>
+                Chưa có cuộc trò chuyện nào.
+              </Typography.Text>
             )}
-          />
+          </Space>
         </Card>
 
         <Card className="page-card">

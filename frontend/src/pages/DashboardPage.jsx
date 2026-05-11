@@ -56,7 +56,7 @@ function DashboardPage() {
       <Alert
         type="error"
         showIcon
-        message="Không có dữ liệu dashboard"
+        title="Không có dữ liệu dashboard"
         description="Vui lòng tải lại trang hoặc kiểm tra kết nối tới backend."
       />
     );
@@ -78,7 +78,7 @@ function DashboardPage() {
         <Alert
           type="warning"
           showIcon
-          message="Bạn đang ở trạng thái bắt buộc đổi mật khẩu"
+          title="Bạn đang ở trạng thái bắt buộc đổi mật khẩu"
           description="Hãy vào trang Hồ sơ cá nhân để đổi mật khẩu rồi tiếp tục sử dụng hệ thống."
         />
       ) : null}

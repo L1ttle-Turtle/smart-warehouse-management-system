@@ -563,7 +563,7 @@ function ShipmentsPage() {
                 responsive
                 items={(selectedShipment.timeline || []).map((item) => ({
                   title: item.label,
-                  description: item.occurred_at ? formatDateTime(item.occurred_at) : 'Chưa phát sinh',
+                  content: item.occurred_at ? formatDateTime(item.occurred_at) : 'Chưa phát sinh',
                   status: getTimelineStepStatus(item, selectedShipment.status),
                 }))}
               />
@@ -597,73 +597,76 @@ function ShipmentsPage() {
         )}
       </SectionCard>
 
-      <Drawer
-        title="Tạo shipment từ phiếu xuất đã xác nhận"
-        placement="right"
-        size={520}
-        onClose={closeDrawer}
-        open={drawerOpen}
-        destroyOnHidden
-        extra={(
-          <Space>
-            <Button onClick={closeDrawer}>Đóng</Button>
-            <Button
-              type="primary"
-              loading={submitting}
-              onClick={handleCreateShipment}
-              disabled={!metaOptions.exportReceipts.length || !metaOptions.shippers.length}
-            >
-              Tạo shipment
-            </Button>
+      {canCreate ? (
+        <Drawer
+          title="Tạo shipment từ phiếu xuất đã xác nhận"
+          placement="right"
+          size={520}
+          onClose={closeDrawer}
+          open={drawerOpen}
+          forceRender
+          destroyOnHidden
+          extra={(
+            <Space>
+              <Button onClick={closeDrawer}>Đóng</Button>
+              <Button
+                type="primary"
+                loading={submitting}
+                onClick={handleCreateShipment}
+                disabled={!metaOptions.exportReceipts.length || !metaOptions.shippers.length}
+              >
+                Tạo shipment
+              </Button>
+            </Space>
+          )}
+        >
+          <Space orientation="vertical" size={16} style={{ width: '100%' }}>
+            {!metaOptions.exportReceipts.length ? (
+              <Alert
+                type="info"
+                showIcon
+                title="Chưa có phiếu xuất đủ điều kiện tạo shipment."
+                description="Hãy xác nhận thêm phiếu xuất kho trước khi tạo đơn giao hàng mới."
+              />
+            ) : null}
+
+            <Form form={form} layout="vertical">
+              <Form.Item
+                name="export_receipt_id"
+                label="Phiếu xuất đã xác nhận"
+                rules={[{ required: true, message: 'Vui lòng chọn phiếu xuất.' }]}
+              >
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder="Chọn phiếu xuất để tạo shipment"
+                  options={exportReceiptOptions}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="shipper_id"
+                label="Shipper phụ trách"
+                rules={[{ required: true, message: 'Vui lòng chọn shipper.' }]}
+              >
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder="Chọn shipper nhận đơn"
+                  options={shipperOptions}
+                />
+              </Form.Item>
+
+              <Form.Item name="note" label="Ghi chú giao hàng">
+                <Input.TextArea
+                  rows={4}
+                  placeholder="Ví dụ: giao ca chiều, ưu tiên khách hẹn trước 17h..."
+                />
+              </Form.Item>
+            </Form>
           </Space>
-        )}
-      >
-        <Space orientation="vertical" size={16} style={{ width: '100%' }}>
-          {!metaOptions.exportReceipts.length ? (
-            <Alert
-              type="info"
-              showIcon
-              title="Chưa có phiếu xuất đủ điều kiện tạo shipment."
-              description="Hãy xác nhận thêm phiếu xuất kho trước khi tạo đơn giao hàng mới."
-            />
-          ) : null}
-
-          <Form form={form} layout="vertical">
-            <Form.Item
-              name="export_receipt_id"
-              label="Phiếu xuất đã xác nhận"
-              rules={[{ required: true, message: 'Vui lòng chọn phiếu xuất.' }]}
-            >
-              <Select
-                showSearch
-                optionFilterProp="label"
-                placeholder="Chọn phiếu xuất để tạo shipment"
-                options={exportReceiptOptions}
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="shipper_id"
-              label="Shipper phụ trách"
-              rules={[{ required: true, message: 'Vui lòng chọn shipper.' }]}
-            >
-              <Select
-                showSearch
-                optionFilterProp="label"
-                placeholder="Chọn shipper nhận đơn"
-                options={shipperOptions}
-              />
-            </Form.Item>
-
-            <Form.Item name="note" label="Ghi chú giao hàng">
-              <Input.TextArea
-                rows={4}
-                placeholder="Ví dụ: giao ca chiều, ưu tiên khách hẹn trước 17h..."
-              />
-            </Form.Item>
-          </Form>
-        </Space>
-      </Drawer>
+        </Drawer>
+      ) : null}
     </Space>
   );
 }

@@ -10,7 +10,6 @@ import {
   Col,
   Form,
   Input,
-  List,
   Modal,
   Row,
   Select,
@@ -239,6 +238,44 @@ function NotificationsPage() {
     },
   ];
 
+  const notificationColumns = [
+    {
+      title: 'Thông báo',
+      dataIndex: 'title',
+      key: 'title',
+      render: (_, item) => (
+        <Space orientation="vertical" size={4}>
+          <Space wrap>
+            <Typography.Text strong>{item.title}</Typography.Text>
+            <StatusTag value={item.type} />
+          </Space>
+          <Typography.Text>{item.content}</Typography.Text>
+          <Typography.Text type="secondary">
+            {item.sender_name || 'System'} · {formatDateTime(item.created_at)}
+          </Typography.Text>
+        </Space>
+      ),
+    },
+    {
+      title: 'Trạng thái',
+      key: 'read_status',
+      width: 190,
+      render: (_, item) => (
+        item.is_read ? (
+          <StatusTag value="done" />
+        ) : (
+          <Button
+            size="small"
+            icon={<CheckCircleOutlined />}
+            onClick={() => handleMarkRead(item.id)}
+          >
+            Đánh dấu đã đọc
+          </Button>
+        )
+      ),
+    },
+  ];
+
   return (
     <Space orientation="vertical" size={16} style={{ width: '100%' }}>
       <SectionCard
@@ -300,45 +337,13 @@ function NotificationsPage() {
               key: 'notifications',
               label: 'Thông báo',
               children: (
-                <List
+                <Table
+                  rowKey="id"
                   loading={loading}
+                  columns={notificationColumns}
                   dataSource={notifications}
+                  pagination={false}
                   locale={{ emptyText: 'Chưa có thông báo nào.' }}
-                  renderItem={(item) => (
-                    <List.Item
-                      actions={[
-                        item.is_read ? (
-                          <StatusTag key="read" value="done" />
-                        ) : (
-                          <Button
-                            key="mark-read"
-                            size="small"
-                            icon={<CheckCircleOutlined />}
-                            onClick={() => handleMarkRead(item.id)}
-                          >
-                            Đánh dấu đã đọc
-                          </Button>
-                        ),
-                      ]}
-                    >
-                      <List.Item.Meta
-                        title={(
-                          <Space wrap>
-                            <Typography.Text strong>{item.title}</Typography.Text>
-                            <StatusTag value={item.type} />
-                          </Space>
-                        )}
-                        description={(
-                          <Space orientation="vertical" size={4}>
-                            <Typography.Text>{item.content}</Typography.Text>
-                            <Typography.Text type="secondary">
-                              {item.sender_name || 'System'} · {formatDateTime(item.created_at)}
-                            </Typography.Text>
-                          </Space>
-                        )}
-                      />
-                    </List.Item>
-                  )}
                 />
               ),
             },
@@ -349,6 +354,7 @@ function NotificationsPage() {
       <Modal
         title="Tạo công việc nội bộ"
         open={taskModalOpen}
+        forceRender
         onCancel={() => setTaskModalOpen(false)}
         onOk={handleCreateTask}
         okText="Tạo công việc"
@@ -387,6 +393,7 @@ function NotificationsPage() {
       <Modal
         title="Gửi thông báo nội bộ"
         open={broadcastModalOpen}
+        forceRender
         onCancel={() => setBroadcastModalOpen(false)}
         onOk={handleBroadcast}
         okText="Gửi thông báo"

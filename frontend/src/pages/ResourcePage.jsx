@@ -638,6 +638,7 @@ function ResourcePage({ resourceKey: resourceKeyProp = null }) {
         open={open}
         onClose={handleCloseDrawer}
         size={760}
+        forceRender
         destroyOnClose
         title={(
           <Space orientation="vertical" size={2}>
@@ -656,7 +657,7 @@ function ResourcePage({ resourceKey: resourceKeyProp = null }) {
           <Alert
             showIcon
             type={editingItem ? 'info' : 'success'}
-            message={editingItem ? 'Bạn đang chỉnh sửa dữ liệu hiện có' : 'Bạn đang tạo mới dữ liệu'}
+            title={editingItem ? 'Bạn đang chỉnh sửa dữ liệu hiện có' : 'Bạn đang tạo mới dữ liệu'}
             description={config.drawerDescription || 'Các trường có dấu * là bắt buộc. Bạn có thể lưu ngay khi hoàn tất biểu mẫu.'}
           />
 

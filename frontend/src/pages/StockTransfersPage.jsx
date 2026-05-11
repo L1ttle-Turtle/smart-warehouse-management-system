@@ -898,6 +898,7 @@ function StockTransfersPage() {
       <Drawer
         open={drawerOpen}
         onClose={closeDrawer}
+        forceRender
         destroyOnClose
         size={820}
         title={editingTransfer ? `Chỉnh sửa phiếu ${editingTransfer.transfer_code}` : 'Thêm phiếu điều chuyển nháp'}

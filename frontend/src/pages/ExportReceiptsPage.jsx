@@ -875,6 +875,7 @@ function ExportReceiptsPage() {
       <Drawer
         open={drawerOpen}
         onClose={closeDrawer}
+        forceRender
         destroyOnClose
         size={760}
         title={editingReceipt ? `Chỉnh sửa phiếu ${editingReceipt.receipt_code}` : 'Thêm phiếu xuất nháp'}

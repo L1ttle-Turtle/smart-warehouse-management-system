@@ -45,7 +45,7 @@ function ProfilePage() {
         <Alert
           type="warning"
           showIcon
-          message="Tài khoản này cần đổi mật khẩu trước khi tiếp tục sử dụng hệ thống"
+          title="Tài khoản này cần đổi mật khẩu trước khi tiếp tục sử dụng hệ thống"
           description="Bạn vẫn có thể cập nhật email hoặc số điện thoại, nhưng vui lòng đổi mật khẩu ngay để gỡ trạng thái bắt buộc này."
         />
       ) : null}

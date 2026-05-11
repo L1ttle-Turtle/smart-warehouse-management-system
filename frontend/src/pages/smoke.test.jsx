@@ -1951,7 +1951,7 @@ test('renders warehouses page with warehouse and location tabs', async () => {
 
   await waitFor(() => expect(screen.getAllByText(/Quản lý kho bãi/i).length).toBeGreaterThan(0));
   expect(screen.getAllByRole('tab')).toHaveLength(2);
-  expect(screen.getByText(/Vị trí kho/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/Vị trí kho/i).length).toBeGreaterThan(0);
   await waitFor(() => expect(screen.getAllByText(/WH001/i).length).toBeGreaterThan(0));
 });
 
@@ -2157,10 +2157,10 @@ test('renders shipments page with create action for manager flow', async () => {
 
   await waitFor(() => expect(screen.getByText(/Vận chuyển/i)).toBeInTheDocument());
   await waitFor(() => expect(screen.getAllByText(/SHP-DEMO-001/i).length).toBeGreaterThan(0));
-  expect(screen.getByRole('button', { name: /Tạo shipment/i })).toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: /Tạo shipment/i }).length).toBeGreaterThan(0);
   expect(screen.getByText(/Chi tiết shipment/i)).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: /Tạo shipment/i }));
+  fireEvent.click(screen.getAllByRole('button', { name: /Tạo shipment/i })[0]);
 
   await waitFor(() => expect(screen.getByText(/Tạo shipment từ phiếu xuất đã xác nhận/i)).toBeInTheDocument());
   expect(screen.getAllByText(/Phiếu xuất đã xác nhận/i).length).toBeGreaterThan(0);
@@ -2181,7 +2181,7 @@ test('shipper can render shipments page and see delivery actions', async () => {
   renderWithProviders(<ShipmentsPage />, '/shipments');
 
   await waitFor(() => expect(screen.getAllByText(/SHP-DEMO-001/i).length).toBeGreaterThan(0));
-  expect(screen.queryByRole('button', { name: /Tạo shipment/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /^Tạo shipment$/i })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Bắt đầu giao/i })).toBeInTheDocument();
 });
 
@@ -2194,7 +2194,7 @@ test('renders invoices page with list and create action for manager flow', async
   expect(screen.getAllByText(/Ghi nhận thanh toán/i).length).toBeGreaterThan(0);
   expect(screen.getByText(/Lịch sử thanh toán/i)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Ghi nhận/i })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /Tạo hóa đơn/i })).toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: /Tạo hóa đơn/i }).length).toBeGreaterThan(0);
 
   fireEvent.click(screen.getByRole('button', { name: /Thu đủ/i }));
   fireEvent.click(screen.getByRole('button', { name: /Ghi nhận/i }));
@@ -2207,7 +2207,7 @@ test('renders invoices page with list and create action for manager flow', async
     }),
   ));
 
-  fireEvent.click(screen.getByRole('button', { name: /Tạo hóa đơn/i }));
+  fireEvent.click(screen.getAllByRole('button', { name: /Tạo hóa đơn/i })[0]);
 
   await waitFor(() => expect(screen.getByText(/Tạo hóa đơn từ phiếu xuất đã xác nhận/i)).toBeInTheDocument());
   expect(screen.getAllByText(/Phiếu xuất đã xác nhận/i).length).toBeGreaterThan(0);
@@ -2229,7 +2229,7 @@ test('accountant can render invoices page for demo review', async () => {
   renderWithProviders(<InvoicesPage />, '/invoices');
 
   await waitFor(() => expect(screen.getAllByText(/INV-DEMO-001/i).length).toBeGreaterThan(0));
-  expect(screen.getByRole('button', { name: /Tạo hóa đơn/i })).toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: /Tạo hóa đơn/i }).length).toBeGreaterThan(0);
   expect(screen.getByText(/Chi tiết hóa đơn/i)).toBeInTheDocument();
 });
 
@@ -2296,8 +2296,8 @@ test('renders notifications page with tasks and notification actions', async () 
   await waitFor(() => expect(screen.getAllByText(/TSK-DEMO-001/i).length).toBeGreaterThan(0));
   expect(screen.getByRole('tab', { name: /Công việc/i })).toBeInTheDocument();
   expect(screen.getByRole('tab', { name: /Thông báo/i })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /Tạo công việc/i })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /Gửi thông báo/i })).toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: /Tạo công việc/i }).length).toBeGreaterThan(0);
+  expect(screen.getAllByRole('button', { name: /Gửi thông báo/i }).length).toBeGreaterThan(0);
 
   fireEvent.click(screen.getByRole('tab', { name: /Thông báo/i }));
 

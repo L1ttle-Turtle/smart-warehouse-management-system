@@ -32,7 +32,7 @@ function RolesPage() {
         <Alert
           type="error"
           showIcon
-          message="Không tải được ma trận quyền"
+          title="Không tải được ma trận quyền"
           description={error}
           style={{ marginBottom: 20 }}
         />

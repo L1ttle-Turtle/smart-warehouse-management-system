@@ -831,6 +831,7 @@ function StocktakesPage() {
       <Drawer
         open={drawerOpen}
         onClose={closeDrawer}
+        forceRender
         destroyOnClose
         size={900}
         title={editingStocktake ? `Chỉnh sửa phiếu ${editingStocktake.stocktake_code}` : 'Thêm phiếu kiểm kê nháp'}

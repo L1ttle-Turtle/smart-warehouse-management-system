@@ -251,15 +251,17 @@ function InvoicesPage() {
   }, [form, selectedReceipt]);
 
   useEffect(() => {
-    paymentForm.resetFields();
-    if (selectedInvoice && selectedInvoice.status !== 'paid') {
-      paymentForm.setFieldsValue({
-        amount: selectedInvoiceRemainingAmount,
-        payment_method: 'cash',
-        bank_account_id: selectedInvoice.bank_account_id || undefined,
-      });
+    if (!selectedInvoice || !canManage || selectedInvoice.status === 'paid') {
+      return;
     }
-  }, [paymentForm, selectedInvoice, selectedInvoiceRemainingAmount]);
+
+    paymentForm.resetFields();
+    paymentForm.setFieldsValue({
+      amount: selectedInvoiceRemainingAmount,
+      payment_method: 'cash',
+      bank_account_id: selectedInvoice.bank_account_id || undefined,
+    });
+  }, [canManage, paymentForm, selectedInvoice, selectedInvoiceRemainingAmount]);
 
   const handleTableChange = (nextPagination) => {
     fetchInvoices({
@@ -778,6 +780,7 @@ function InvoicesPage() {
         size={640}
         onClose={closeDrawer}
         open={drawerOpen}
+        forceRender
         destroyOnHidden
         extra={(
           <Space>
