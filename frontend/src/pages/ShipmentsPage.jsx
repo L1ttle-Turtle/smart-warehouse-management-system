@@ -17,6 +17,7 @@ import {
   Col,
   Select,
   Space,
+  Steps,
   Table,
   Typography,
   message,
@@ -36,6 +37,19 @@ const STATUS_OPTIONS = [
   { label: 'Đã giao xong', value: 'delivered' },
   { label: 'Đã hủy', value: 'cancelled' },
 ];
+
+function getTimelineStepStatus(item, shipmentStatus) {
+  if (shipmentStatus === 'cancelled' && item.status !== 'cancelled') {
+    return item.done ? 'finish' : 'wait';
+  }
+  if (item.done) {
+    return 'finish';
+  }
+  if (item.status === shipmentStatus) {
+    return 'process';
+  }
+  return 'wait';
+}
 
 function buildStatusActions(shipment, roleName, canManage) {
   if (!shipment || !canManage) {
@@ -540,6 +554,20 @@ function ShipmentsPage() {
               <Descriptions.Item label="Hủy lúc">{formatDateTime(selectedShipment.cancelled_at)}</Descriptions.Item>
               <Descriptions.Item label="Người tạo">{selectedShipment.created_by_name || '-'}</Descriptions.Item>
             </Descriptions>
+
+            <SectionCard
+              title="Timeline giao hàng"
+              subtitle="Theo dõi mốc thời gian từ lúc giao shipper đến khi hoàn tất hoặc hủy."
+            >
+              <Steps
+                responsive
+                items={(selectedShipment.timeline || []).map((item) => ({
+                  title: item.label,
+                  description: item.occurred_at ? formatDateTime(item.occurred_at) : 'Chưa phát sinh',
+                  status: getTimelineStepStatus(item, selectedShipment.status),
+                }))}
+              />
+            </SectionCard>
 
             {statusActions.length ? (
               <Space wrap>

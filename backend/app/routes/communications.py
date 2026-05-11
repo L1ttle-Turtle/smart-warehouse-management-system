@@ -6,11 +6,12 @@ from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 
 from ..audit import log_audit_event
-from ..extensions import db
+from ..extensions import db, socketio
 from ..models import InternalTask, Notification, Role, User
 from ..permissions import get_current_user, permission_required
 from ..schemas import NotificationBroadcastSchema, TaskCreateSchema, TaskStatusSchema
 from ..serializers import serialize_notification, serialize_task, serialize_user_summary
+from ..socket_events import user_room
 from ..utils import generate_code, utc_now
 
 communications_bp = Blueprint("communications", __name__)
@@ -97,6 +98,14 @@ def create_notification(sender_id, receiver_id, title, content, notification_typ
     )
     db.session.add(notification)
     return notification
+
+
+def emit_notification(notification):
+    socketio.emit(
+        "notifications:new",
+        serialize_notification(notification),
+        to=user_room(notification.receiver_id),
+    )
 
 
 def collect_broadcast_receiver_ids(receiver_ids, role_names):
@@ -186,6 +195,8 @@ def broadcast_notifications():
         for receiver_id in receiver_ids
     ]
     db.session.commit()
+    for notification in notifications:
+        emit_notification(notification)
     return jsonify({"items": [serialize_notification(item) for item in notifications]}), 201
 
 
@@ -290,7 +301,7 @@ def create_task():
     db.session.add(task)
     db.session.flush()
 
-    create_notification(
+    notification = create_notification(
         current_user.id,
         assignee.id,
         f"Công việc mới {task.task_code}",
@@ -299,6 +310,7 @@ def create_task():
     )
     audit_task_change("tasks.created", current_user.id, task)
     db.session.commit()
+    emit_notification(notification)
     return jsonify({"item": serialize_task(task)}), 201
 
 

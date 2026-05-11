@@ -523,6 +523,28 @@ class Payment(db.Model, SerializerMixin, TimestampMixin):
     creator = db.relationship("User", foreign_keys=[created_by])
 
 
+class BankTransactionLog(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "bank_transaction_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    transaction_code = db.Column(db.String(30), unique=True, nullable=False)
+    invoice_id = db.Column(db.Integer, db.ForeignKey("invoices.id"))
+    bank_account_id = db.Column(db.Integer, db.ForeignKey("bank_accounts.id"))
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    reconciled_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    amount = db.Column(db.Float, nullable=False)
+    description = db.Column(db.String(255), nullable=False)
+    status = db.Column(db.String(20), default="pending", nullable=False)
+    received_at = db.Column(db.DateTime, nullable=False)
+    reconciled_at = db.Column(db.DateTime)
+    note = db.Column(db.String(255))
+
+    invoice = db.relationship("Invoice", foreign_keys=[invoice_id])
+    bank_account = db.relationship("BankAccount", foreign_keys=[bank_account_id])
+    creator = db.relationship("User", foreign_keys=[created_by])
+    reconciler = db.relationship("User", foreign_keys=[reconciled_by])
+
+
 class Notification(db.Model, SerializerMixin, TimestampMixin):
     __tablename__ = "notifications"
 
@@ -556,6 +578,54 @@ class InternalTask(db.Model, SerializerMixin, TimestampMixin):
 
     assignee = db.relationship("User", foreign_keys=[assigned_to_id])
     creator = db.relationship("User", foreign_keys=[created_by])
+
+
+class Conversation(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "conversations"
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_type = db.Column(db.String(20), default="direct", nullable=False)
+
+    participants = db.relationship(
+        "ConversationParticipant",
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+        order_by="ConversationParticipant.id",
+    )
+    messages = db.relationship(
+        "Message",
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+        order_by="Message.sent_at",
+    )
+
+
+class ConversationParticipant(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "conversation_participants"
+    __table_args__ = (
+        db.UniqueConstraint("conversation_id", "user_id", name="uq_conversation_user"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey("conversations.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    last_read_at = db.Column(db.DateTime)
+
+    conversation = db.relationship("Conversation", back_populates="participants")
+    user = db.relationship("User", foreign_keys=[user_id])
+
+
+class Message(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "messages"
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey("conversations.id"), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    content = db.Column(db.String(1000), nullable=False)
+    sent_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+
+    conversation = db.relationship("Conversation", back_populates="messages")
+    sender = db.relationship("User", foreign_keys=[sender_id])
 
 
 class StockTransfer(db.Model, SerializerMixin, TimestampMixin):

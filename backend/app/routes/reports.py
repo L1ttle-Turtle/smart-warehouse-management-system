@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime
 
 from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required
@@ -13,8 +12,11 @@ from ..models import (
     Inventory,
     InventoryMovement,
     Invoice,
+    Payment,
     Product,
     Shipment,
+    Stocktake,
+    StockTransfer,
     Warehouse,
 )
 from ..permissions import permission_required
@@ -34,7 +36,7 @@ def month_key(value):
 def dashboard():
     pending_receipts = ImportReceipt.query.filter_by(status="draft").count()
     pending_exports = ExportReceipt.query.filter_by(status="draft").count()
-    active_shipments = Shipment.query.filter(Shipment.shipping_status.in_(["pending", "preparing", "delivering"])).count()
+    active_shipments = Shipment.query.filter(Shipment.status.in_(["assigned", "in_transit"])).count()
     low_stock = Product.query.filter(Product.quantity_total <= Product.min_stock).count()
     return jsonify(
         {
@@ -46,6 +48,95 @@ def dashboard():
                 "low_stock_products": low_stock,
                 "invoices": Invoice.query.count(),
             }
+        }
+    )
+
+
+@reports_bp.get("/summary")
+@jwt_required()
+@permission_required("reports.view")
+def summary():
+    inventory_rows = Inventory.query.all()
+    total_inventory_quantity = sum(row.quantity for row in inventory_rows)
+    low_stock_lines = 0
+    out_of_stock_lines = 0
+    for row in inventory_rows:
+        quantity = float(row.quantity or 0)
+        min_stock = float(row.product.min_stock or 0) if row.product else 0
+        if quantity <= 0:
+            out_of_stock_lines += 1
+        elif quantity <= min_stock:
+            low_stock_lines += 1
+
+    draft_documents = (
+        ImportReceipt.query.filter_by(status="draft").count()
+        + ExportReceipt.query.filter_by(status="draft").count()
+        + StockTransfer.query.filter_by(status="draft").count()
+        + Stocktake.query.filter_by(status="draft").count()
+    )
+    active_shipments = Shipment.query.filter(Shipment.status.in_(["assigned", "in_transit"])).count()
+    total_revenue = sum(float(invoice.total_amount or 0) for invoice in Invoice.query.all())
+    paid_amount = sum(float(payment.amount or 0) for payment in Payment.query.all())
+    outstanding_amount = max(total_revenue - paid_amount, 0)
+
+    metrics = [
+        {
+            "key": "total_inventory_quantity",
+            "label": "Tổng tồn kho",
+            "value": total_inventory_quantity,
+            "suffix": "đơn vị",
+            "tone": "primary",
+        },
+        {
+            "key": "stock_alert_lines",
+            "label": "Dòng tồn cần chú ý",
+            "value": low_stock_lines + out_of_stock_lines,
+            "suffix": "dòng",
+            "tone": "warning",
+        },
+        {
+            "key": "draft_documents",
+            "label": "Chứng từ nháp",
+            "value": draft_documents,
+            "suffix": "phiếu",
+            "tone": "teal",
+        },
+        {
+            "key": "active_shipments",
+            "label": "Đơn đang giao",
+            "value": active_shipments,
+            "suffix": "đơn",
+            "tone": "success",
+        },
+        {
+            "key": "total_revenue",
+            "label": "Doanh thu hóa đơn",
+            "value": total_revenue,
+            "format": "currency",
+            "tone": "danger",
+        },
+        {
+            "key": "outstanding_amount",
+            "label": "Công nợ còn lại",
+            "value": outstanding_amount,
+            "format": "currency",
+            "tone": "warning",
+        },
+    ]
+
+    return jsonify(
+        {
+            "metrics": metrics,
+            "summary": {
+                "total_inventory_quantity": total_inventory_quantity,
+                "low_stock_lines": low_stock_lines,
+                "out_of_stock_lines": out_of_stock_lines,
+                "draft_documents": draft_documents,
+                "active_shipments": active_shipments,
+                "total_revenue": total_revenue,
+                "paid_amount": paid_amount,
+                "outstanding_amount": outstanding_amount,
+            },
         }
     )
 
@@ -110,23 +201,31 @@ def top_products():
 @jwt_required()
 @permission_required("reports.view")
 def shipment_performance():
-    on_time = 0
-    delayed = 0
-    pending = 0
+    assigned = 0
+    in_transit = 0
+    delivered = 0
+    cancelled = 0
     for shipment in Shipment.query.all():
-        if shipment.shipping_status in {"pending", "preparing", "delivering"}:
-            pending += 1
-            continue
-        if shipment.expected_delivery_at and shipment.delivered_at:
-            if shipment.delivered_at <= shipment.expected_delivery_at:
-                on_time += 1
-            else:
-                delayed += 1
-        elif shipment.shipping_status == "delivered":
-            on_time += 1
+        if shipment.status == "assigned":
+            assigned += 1
+        elif shipment.status == "in_transit":
+            in_transit += 1
+        elif shipment.status == "delivered":
+            delivered += 1
+        elif shipment.status == "cancelled":
+            cancelled += 1
         else:
-            delayed += 1
-    return jsonify({"items": [{"status": "on_time", "count": on_time}, {"status": "delayed", "count": delayed}, {"status": "pending", "count": pending}]})
+            assigned += 1
+    return jsonify(
+        {
+            "items": [
+                {"status": "assigned", "status_label": "Đã phân công", "count": assigned},
+                {"status": "in_transit", "status_label": "Đang giao", "count": in_transit},
+                {"status": "delivered", "status_label": "Đã giao", "count": delivered},
+                {"status": "cancelled", "status_label": "Đã hủy", "count": cancelled},
+            ]
+        }
+    )
 
 
 @reports_bp.get("/revenue")
@@ -136,8 +235,8 @@ def revenue():
     revenue_map = defaultdict(float)
     payment_status_map = defaultdict(int)
     for invoice in Invoice.query.all():
-        revenue_map[month_key(invoice.created_at)] += invoice.final_amount
-        payment_status_map[invoice.payment_status] += 1
+        revenue_map[month_key(invoice.created_at)] += float(invoice.total_amount or 0)
+        payment_status_map[invoice.status] += 1
     revenue_items = [
         {"month": month, "revenue": amount}
         for month, amount in sorted(revenue_map.items())

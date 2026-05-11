@@ -1,8 +1,20 @@
 # Warehouse IQ
 
+## Cập nhật mới nhất
+
+- Đã bổ sung batch hoàn thiện demo lớn: timeline shipment, trang `/payments`, realtime nhẹ cho notification/chat và bank reconciliation stub cho Module 12.
+- Đã thêm route `/bank-reconciliation` để mô phỏng giao dịch ngân hàng, khớp hóa đơn và ghi nhận payment thật khi bấm đối soát.
+- Đã đổi wording phần phân quyền từ “Ủy quyền quyền hạn” sang “Trao quyền tạm thời” để người dùng không phải dev dễ hiểu hơn.
+- Đã mở rộng seed demo mật độ cao cho toàn project: 4 kho, 13 vị trí, 20 sản phẩm, hơn 30 dòng tồn kho, hơn 40 movement và dữ liệu sẵn cho nhập/xuất/điều chuyển/kiểm kê/vận chuyển/hóa đơn/payment/task/chat.
+- Đã bật Module 10 mức tối thiểu cho demo: chat nội bộ 1-1 qua REST API và frontend route `/chat`.
+- Chat hiện hỗ trợ xem danh sách user có thể nhắn, tạo cuộc trò chuyện trực tiếp, xem lịch sử tin nhắn và gửi tin nhắn mới có lưu database.
+- Đã bật Module 11 mức tối thiểu cho demo: backend `/reports/*` và frontend route `/reports`.
+- Trang báo cáo hiện có KPI tổng quan điều hành và các lát cắt: tồn kho theo kho, nhập/xuất theo tháng, trạng thái vận chuyển, doanh thu hóa đơn, top hàng hóa và trạng thái thanh toán.
+- Đã sửa route reports để dùng đúng model hiện tại: `Shipment.status`, `Invoice.status`, `Invoice.total_amount`.
+
 Hệ thống quản lý kho hàng thông minh cho doanh nghiệp vừa và nhỏ, phát triển theo hướng đồ án tốt nghiệp nhưng ưu tiên khả năng chạy thật, test được và demo được theo từng module.
 
-Trạng thái hiện tại của repo: **đã hoàn thành nền tảng Module 1-5, hoàn thiện Module 6.5, mở Module 7 mức tối thiểu, có hóa đơn + payment thủ công cho Module 8 và đã mở Module 9 tối thiểu với công việc/thông báo nội bộ**.
+Trạng thái hiện tại của repo: **đã hoàn thành nền tảng Module 1-5, hoàn thiện Module 6.5, mở Module 7 mức tối thiểu có timeline, có hóa đơn + payment thủ công cho Module 8, đã mở Module 9 tối thiểu với realtime notification nhẹ, đã có Module 10 chat 1-1 có realtime nhẹ, Module 11 báo cáo demo tối thiểu và Module 12 bank stub mức demo**.
 
 ## 1. Mục tiêu dự án
 
@@ -27,6 +39,9 @@ Demo narrative hiện tại đã đi được đến mức:
 6. Truy vết lại movement history để giải thích biến động tồn kho.
 7. Cảnh báo tồn thấp, lọc tồn kho nâng cao và xác nhận phiếu kiểm kê nhiều dòng.
 8. Tạo shipment từ phiếu xuất đã xác nhận và cập nhật trạng thái giao hàng theo vai trò.
+9. Lập hóa đơn, ghi nhận thanh toán thủ công và xem báo cáo demo.
+10. Mô phỏng giao dịch ngân hàng, đối soát vào hóa đơn và tạo payment thật.
+11. Trao đổi nội bộ 1-1 giữa các user có quyền chat.
 
 ## 2. Công nghệ sử dụng
 
@@ -111,17 +126,18 @@ Luồng dữ liệu chính:
 
 | Module | Trạng thái | Ghi chú |
 |---|---|---|
-| Module 1 - Xác thực và phân quyền | Hoàn thành nền tảng | Login JWT, me/logout, route guard, role/permission, profile, đổi mật khẩu, ủy quyền user-level |
+| Module 1 - Xác thực và phân quyền | Hoàn thành nền tảng | Login JWT, me/logout, route guard, role/permission, profile, đổi mật khẩu, trao quyền tạm thời user-level |
 | Module 2 - Người dùng và nhân sự | Hoàn thành nền tảng | CRUD user, CRUD employee, liên kết user-employee, audit log, dashboard cá nhân |
 | Module 3 - Danh mục nền | Hoàn thành | Category, Supplier, Customer, BankAccount, giao diện `/catalogs` |
 | Module 4 - Sản phẩm | Hoàn thành mức demo | CRUD sản phẩm, category, min stock, status, quantity total |
 | Module 5 - Kho bãi và vị trí kho | Hoàn thành mức demo | CRUD kho, CRUD vị trí, route `/warehouses` dạng tab |
 | Module 6 - Nghiệp vụ kho | Đang triển khai, đã usable | Inventory hardening, movement history, nhập, xuất, điều chuyển, điều chỉnh tồn kho, phiếu kiểm kê nhiều dòng |
-| Module 7 - Vận chuyển | Đang triển khai mức tối thiểu | Shipment tạo từ phiếu xuất đã xác nhận, có route `/shipments` và trạng thái giao hàng cơ bản |
-| Module 8 - Hóa đơn và thanh toán | Đang triển khai mức tối thiểu | Đã có invoice backend, payment thủ công backend + UI trong `/invoices`; đối soát ngân hàng chưa làm |
-| Module 9 - Thông báo và công việc | Đang triển khai mức tối thiểu | Task nội bộ, notification in-app, route `/notifications`; chưa có realtime/chat |
-| Module 10 - Chat nội bộ | Chưa bắt đầu | Chưa cần cho demo tối thiểu |
-| Module 11 - Dashboard và báo cáo nghiệp vụ | Chưa bắt đầu sâu | Mới có dashboard cá nhân, chưa có dashboard nghiệp vụ kho |
+| Module 7 - Vận chuyển | Đang triển khai mức demo | Shipment tạo từ phiếu xuất đã xác nhận, route `/shipments`, trạng thái giao hàng và timeline |
+| Module 8 - Hóa đơn và thanh toán | Đang triển khai mức demo | Invoice, payment thủ công, route `/invoices`, `/payments`, trạng thái unpaid/partial/paid |
+| Module 9 - Thông báo và công việc | Đang triển khai mức demo | Task nội bộ, notification in-app, route `/notifications`, realtime notification nhẹ qua Socket.IO |
+| Module 10 - Chat nội bộ | Đang triển khai mức demo | Chat 1-1 qua REST API + realtime nhẹ, route `/chat`, seed conversation demo; chưa làm chat nhóm |
+| Module 11 - Dashboard và báo cáo nghiệp vụ | Đang triển khai mức tối thiểu | Route `/reports` với KPI tổng quan, báo cáo tồn kho, nhập/xuất, vận chuyển, doanh thu và top sản phẩm |
+| Module 12 - Bank stub / đối soát | Đang triển khai mức demo | Route `/bank-reconciliation`, API `/bank-transactions`, mô phỏng giao dịch và đối soát thành payment |
 
 ## 6. Những gì đã hoàn thành theo module
 
@@ -145,7 +161,7 @@ Luồng dữ liệu chính:
 - Phân trang, lọc, sort server-side
 - Dashboard cá nhân tại `/`
 - Tự sinh mã nhân viên theo tiền tố phòng ban
-- Ủy quyền quyền hạn theo từng user, không theo role hàng loạt
+- Trao quyền tạm thời theo từng user, không theo role hàng loạt
 
 ### Module 3 - Base Catalogs
 
@@ -360,6 +376,7 @@ Luồng dữ liệu chính:
 - Chọn shipper từ danh sách user có vai trò `shipper`
 - Xem chi tiết sản phẩm và vị trí xuất đi theo shipment
 - Cập nhật trạng thái giao hàng theo đúng quyền của người dùng
+- Xem timeline giao hàng theo các mốc `assigned`, `in_transit`, `delivered`, `cancelled`
 
 ### Module 8 - Hóa đơn tối thiểu
 
@@ -397,9 +414,39 @@ Luồng dữ liệu chính:
 - Ghi nhận payment thủ công ngay trong chi tiết hóa đơn
 - Xem `Đã thu`, `Còn phải thu` và lịch sử thanh toán theo hóa đơn
 
-Chưa làm trong lượt này:
+Đã có thêm:
 
-- Đối soát ngân hàng / bank transaction tự động
+- Route `/payments` để xem toàn bộ lịch sử payment đã ghi nhận
+- Bộ lọc payment theo từ khóa, hóa đơn và phương thức thanh toán
+
+### Module 12 - Bank stub / đối soát demo
+
+- `GET /bank-transactions`
+- `POST /bank-transactions/simulate`
+- `POST /bank-transactions/<id>/reconcile`
+
+Đã có trên backend:
+
+- Model `bank_transaction_logs`
+- Mô phỏng giao dịch ngân hàng vào hệ thống bằng `simulate`
+- Tự khớp hóa đơn theo `invoice_code` hoặc nội dung chuyển khoản có chứa mã hóa đơn
+- Giao dịch khớp hóa đơn có trạng thái `matched`
+- Giao dịch chưa rõ hóa đơn có trạng thái `pending`
+- Khi đối soát giao dịch `matched`, hệ thống tạo `Payment` thật và cập nhật trạng thái hóa đơn sang `partial` hoặc `paid`
+- Chặn đối soát giao dịch chưa khớp hóa đơn hoặc số tiền vượt quá phần còn phải thu
+
+Đã có trên frontend:
+
+- Route `/bank-reconciliation`
+- Danh sách giao dịch ngân hàng giả lập
+- Bộ lọc theo trạng thái, hóa đơn và từ khóa
+- Modal mô phỏng giao dịch chuyển khoản
+- Nút `Đối soát` để tạo payment thật từ giao dịch đã khớp
+
+Giới hạn hiện tại:
+
+- Chưa kết nối ngân hàng thật
+- Chưa có màn hình gán thủ công giao dịch `pending` vào hóa đơn nếu nội dung chuyển khoản thiếu mã hóa đơn
 
 ### Module 9 - Công việc và thông báo tối thiểu
 
@@ -426,12 +473,43 @@ Chưa làm trong lượt này:
 - Tab `Công việc` để xem, lọc trạng thái và cập nhật tiến độ
 - Tab `Thông báo` để xem và đánh dấu đã đọc
 - Modal tạo công việc và modal gửi thông báo cho user/vai trò
+- Nhận notification mới qua Socket.IO ở mức demo
 
 Chưa làm trong lượt này:
 
-- Chat nội bộ 1-1
-- Realtime Socket.IO cho notification
 - Workflow phê duyệt nhiều bước
+
+### Module 10 - Chat nội bộ tối thiểu
+
+- `GET /chat/users`
+- `GET /chat/conversations`
+- `POST /chat/conversations/direct`
+- `GET /chat/conversations/<id>/messages`
+- `POST /chat/conversations/<id>/messages`
+
+Đã có trên backend:
+
+- Model `conversations`, `conversation_participants`, `messages`
+- Permission `chat.view` cho các vai trò demo
+- Tạo hoặc lấy lại cuộc trò chuyện 1-1 giữa 2 user
+- Chặn tự chat với chính mình
+- Chặn user không thuộc conversation xem/gửi tin nhắn
+- Seed conversation demo giữa `manager` và `staff`
+
+Đã có trên frontend:
+
+- Route `/chat`
+- Danh sách cuộc trò chuyện 1-1
+- Chọn user để bắt đầu cuộc trò chuyện mới
+- Xem lịch sử tin nhắn
+- Gửi tin nhắn mới và refresh hội thoại
+- Nhận tin nhắn mới qua Socket.IO ở mức demo
+
+Chưa làm trong lượt này:
+
+- Chat nhóm
+- Seen/read receipt nâng cao
+- Presence/typing indicator realtime
 
 ## 7. Các route frontend đang có
 
@@ -452,8 +530,12 @@ Chưa làm trong lượt này:
 | `/shipments` | Vận chuyển / giao hàng |
 | `/stocktakes` | Kiểm kê kho nhiều dòng |
 | `/invoices` | Danh sách hóa đơn và lập hóa đơn tối thiểu |
+| `/payments` | Lịch sử thanh toán đã ghi nhận |
+| `/bank-reconciliation` | Mô phỏng giao dịch ngân hàng và đối soát hóa đơn |
 | `/notifications` | Công việc nội bộ và thông báo in-app |
-| `/delegations` | Ủy quyền quyền hạn |
+| `/chat` | Chat nội bộ 1-1 |
+| `/reports` | Báo cáo nghiệp vụ demo |
+| `/delegations` | Trao quyền tạm thời theo từng user |
 | `/audit-logs` | Audit log |
 | `/roles` | Ma trận vai trò và quyền |
 | `/forbidden` | Trang chặn quyền |
@@ -563,6 +645,9 @@ Mỗi resource hỗ trợ:
 - `GET /payments`
 - `POST /payments`
 - `GET /payments/<id>`
+- `GET /bank-transactions`
+- `POST /bank-transactions/simulate`
+- `POST /bank-transactions/<id>/reconcile`
 - `GET /tasks/meta`
 - `GET /tasks`
 - `POST /tasks`
@@ -570,6 +655,23 @@ Mỗi resource hỗ trợ:
 - `GET /notifications`
 - `POST /notifications/broadcast`
 - `PATCH /notifications/<id>/read`
+
+### Chat
+
+- `GET /chat/users`
+- `GET /chat/conversations`
+- `POST /chat/conversations/direct`
+- `GET /chat/conversations/<id>/messages`
+- `POST /chat/conversations/<id>/messages`
+
+### Reports
+
+- `GET /reports/summary`
+- `GET /reports/inventory-by-warehouse`
+- `GET /reports/stock-movement`
+- `GET /reports/top-products`
+- `GET /reports/shipment-performance`
+- `GET /reports/revenue`
 
 ## 9. Database và domain hiện có
 
@@ -600,6 +702,15 @@ Các bảng nổi bật đang dùng thật trong project:
 - `stock_transfers`
 - `stock_transfer_details`
 - `shipments`
+- `invoices`
+- `invoice_details`
+- `payments`
+- `bank_transaction_logs`
+- `tasks`
+- `notifications`
+- `conversations`
+- `conversation_participants`
+- `messages`
 
 Relationship chính của domain kho:
 
@@ -612,10 +723,11 @@ Relationship chính của domain kho:
   - sản phẩm
   - người thực hiện
 - `ImportReceipt`, `ExportReceipt`, `StockTransfer`, `Stocktake` có detail riêng
+- `Conversation` có nhiều participant và message để phục vụ chat nội bộ 1-1
 
 ## 10. Dữ liệu seed demo hiện có
 
-Seed hiện tại đủ dày để demo các luồng chính mà không cần nhập tay từ đầu.
+Seed hiện tại đủ dày để demo các luồng chính mà không cần nhập tay từ đầu. Bộ seed này ưu tiên dữ liệu thực tế, phân bố theo nhiều kho/vị trí và có đủ trạng thái để test lọc, báo cáo, phân quyền và nghiệp vụ tồn kho.
 
 ### Tài khoản và nhân sự
 
@@ -629,28 +741,68 @@ Seed hiện tại đủ dày để demo các luồng chính mà không cần nh�
 
 ### Danh mục nền
 
-- 4 nhóm hàng
-- 4 nhà cung cấp
-- 4 khách hàng
-- 3 tài khoản ngân hàng
+- 8 nhóm hàng, gồm nhóm nền và nhóm mở rộng như thiết bị kho, vật tư vệ sinh, an toàn lao động, linh kiện thay thế
+- 10 nhà cung cấp, gồm cả trạng thái `active` và `inactive`
+- 10 khách hàng, gồm cả trạng thái `active` và `inactive`
+- 5 tài khoản ngân hàng để test hóa đơn/payment
 
 ### Kho và sản phẩm
 
-- 2 kho:
+- 4 kho:
   - `WH001` - Kho Trung Tâm
   - `WH002` - Kho Miền Nam
-- 6 vị trí kho
-- 7 sản phẩm demo
-- Nhiều dòng tồn kho phân bố theo kho và vị trí
-- Movement seed opening stock và stock check ban đầu
-- 1 phiếu kiểm kê demo dạng `draft`
+  - `WH003` - Kho Miền Bắc
+  - `WH004` - Kho Hàng Lỗi Và Bảo Hành
+- 13 vị trí kho, gồm khu hàng nhanh, hàng dự trữ, QC, hàng trả và hàng tạm giữ
+- 20 sản phẩm demo thuộc nhiều nhóm hàng
+- Hơn 30 dòng tồn kho phân bố theo kho, vị trí và sản phẩm
+- Có đủ trạng thái tồn: `Đủ hàng`, `Tồn thấp`, `Hết hàng`
+- Hơn 40 movement để test lịch sử biến động và báo cáo
 
 ### Chứng từ kho demo
 
-- `IMP-DEMO-001`
-- `EXP-DEMO-001`
-- `TRF-DEMO-001`
-- `STK-DEMO-001`
+- Phiếu nhập:
+  - `IMP-DEMO-001` dạng `draft`
+  - `IMP-DEMO-002` dạng `draft`
+  - `IMP-DEMO-003` dạng `confirmed`
+- Phiếu xuất:
+  - `EXP-DEMO-001` dạng `draft`
+  - `EXP-DEMO-002` dạng `draft`
+  - `EXP-DEMO-003` dạng `confirmed`
+  - `EXP-DEMO-004` dạng `confirmed`
+  - `EXP-SHP-001` dạng `confirmed`
+- Phiếu điều chuyển:
+  - `TRF-DEMO-001` dạng `draft`
+  - `TRF-DEMO-002` dạng `confirmed`
+  - `TRF-DEMO-003` dạng `draft`
+- Phiếu kiểm kê:
+  - `STK-DEMO-001` dạng `draft`
+  - `STK-DEMO-002` dạng `draft`
+  - `STK-DEMO-003` dạng `confirmed`
+
+### Vận chuyển, hóa đơn và thanh toán demo
+
+- 3 shipment:
+  - `SHP-DEMO-001` dạng `assigned`
+  - `SHP-DEMO-002` dạng `in_transit`
+  - `SHP-DEMO-003` dạng `delivered`
+- 3 hóa đơn:
+  - `INV-DEMO-001` dạng `unpaid`
+  - `INV-DEMO-002` dạng `partial`
+  - `INV-DEMO-003` dạng `paid`
+- 2 payment thủ công:
+  - `PAY-DEMO-001`
+  - `PAY-DEMO-002`
+- 3 giao dịch ngân hàng giả lập:
+  - `BNK-DEMO-001` đã khớp `INV-DEMO-002`
+  - `BNK-DEMO-002` đang chờ kiểm tra vì thiếu mã hóa đơn
+  - `BNK-DEMO-003` đã khớp `INV-DEMO-001`, dùng để demo bấm đối soát tạo payment thật
+
+### Cộng tác nội bộ demo
+
+- 5 công việc nội bộ để demo trạng thái và phân công
+- Ít nhất 8 notification in-app liên quan task, tồn kho, payment và shipment
+- 4 conversation chat 1-1 giữa các vai trò chính, có lịch sử tin nhắn mẫu
 
 ## 11. Tài khoản test mặc định
 
@@ -673,7 +825,7 @@ SECRET_KEY=warehouse-secret-key-with-32-plus-characters
 JWT_SECRET_KEY=warehouse-jwt-secret-key-with-32-plus-characters
 DATABASE_URL=mysql+pymysql://root:password@localhost:3306/warehouse_db
 FRONTEND_URL=http://localhost:5173
-SOCKETIO_CORS_ALLOWED_ORIGINS=http://localhost:5173
+SOCKETIO_CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 DEFAULT_PASSWORD=Password123!
 ```
 
@@ -736,10 +888,10 @@ npm run build
 
 ### Kết quả kiểm thử gần nhất
 
-- Backend: `168 passed`
-- Frontend smoke: `33 passed`
-- Frontend lint: `pass`
-- Frontend build: `pass`
+- Backend: `pytest backend/tests -q` đạt `192 passed`
+- Frontend test: `npm run test -- --run` đạt `40 passed`
+- Frontend lint: `npm run lint` đạt, không còn cảnh báo ESLint
+- Frontend build: `npm run build` đạt
 
 ## 15. Kịch bản demo gợi ý
 
@@ -748,7 +900,7 @@ npm run build
 1. Đăng nhập bằng `admin`
 2. Mở dashboard cá nhân
 3. Vào `Tài khoản`, `Nhân sự`, `Vai trò và quyền`
-4. Mở `Ủy quyền quyền hạn`
+4. Mở `Trao quyền tạm thời`
 5. Mở `Audit log`
 
 ### Kịch bản 2 - Demo danh mục và master data
@@ -799,6 +951,16 @@ npm run build
 3. Chọn phiếu xuất đã xác nhận, nhập đơn giá từng dòng và tạo hóa đơn
 4. Xem chi tiết hóa đơn, tổng số lượng và tổng tiền đã snapshot
 5. Trong chi tiết hóa đơn, nhập payment thủ công hoặc bấm `Thu đủ`, sau đó kiểm tra hóa đơn chuyển sang `partial` hoặc `paid`
+6. Mở `Thanh toán` để xem lịch sử payment đã ghi nhận theo hóa đơn/phương thức
+
+### Kịch bản 6.1 - Demo đối soát ngân hàng giả lập
+
+1. Đăng nhập `accountant`
+2. Mở `Đối soát ngân hàng`
+3. Xem giao dịch `BNK-DEMO-003` đang ở trạng thái `Đã khớp hóa đơn`
+4. Bấm `Đối soát` để hệ thống tạo payment thật cho hóa đơn liên quan
+5. Quay lại `Hóa đơn` hoặc `Thanh toán` để thấy trạng thái và lịch sử thu tiền đã đổi
+6. Bấm `Mô phỏng giao dịch` để tạo một giao dịch mới có hoặc không có mã hóa đơn trong nội dung chuyển khoản
 
 ### Kịch bản 7 - Demo công việc và thông báo nội bộ
 
@@ -807,12 +969,21 @@ npm run build
 3. Đăng nhập `staff`, mở cùng màn hình và thấy công việc được giao
 4. Staff đổi trạng thái công việc sang `in_progress` hoặc `done`
 5. Mở tab `Thông báo` để xem notification sinh từ công việc và đánh dấu đã đọc
+6. Nếu mở 2 trình duyệt/2 tài khoản song song, notification mới có thể đẩy qua Socket.IO ở mức demo
+
+### Kịch bản 8 - Demo chat nội bộ
+
+1. Đăng nhập `manager`, mở `Chat nội bộ`
+2. Chọn hoặc tạo hội thoại với `staff`
+3. Gửi tin nhắn mới
+4. Đăng nhập `staff` ở trình duyệt khác để thấy tin nhắn realtime ở mức demo
 
 ## 16. Quyền theo vai trò ở mức hiện tại
 
 ### Admin
 
 - Toàn quyền trên các module đã làm
+- Sử dụng chat nội bộ 1-1
 
 ### Manager
 
@@ -823,6 +994,7 @@ npm run build
 - Quản lý nhập, xuất, điều chuyển, điều chỉnh tồn
 - Quản lý shipment mức tối thiểu
 - Tạo công việc và gửi thông báo nội bộ
+- Sử dụng chat nội bộ 1-1
 
 ### Staff
 
@@ -831,6 +1003,7 @@ npm run build
 - Điều chỉnh tồn kho tối thiểu
 - Tạo và cập nhật shipment mức tối thiểu
 - Xem/cập nhật công việc được giao và đọc thông báo của mình
+- Sử dụng chat nội bộ 1-1
 - Không quản lý user, employee, catalog master
 
 ### Accountant
@@ -839,13 +1012,17 @@ npm run build
 - Khách hàng
 - Tài khoản ngân hàng
 - Xem/lập hóa đơn và ghi nhận payment thủ công trong `/invoices`
+- Xem lịch sử payment trong `/payments`
+- Mô phỏng và đối soát giao dịch ngân hàng trong `/bank-reconciliation`
 - Xem công việc được giao và đọc thông báo của mình
+- Sử dụng chat nội bộ 1-1
 
 ### Shipper
 
 - Dashboard cá nhân
 - Xem shipment được giao cho chính mình
 - Xem công việc được giao và đọc thông báo của mình
+- Sử dụng chat nội bộ 1-1
 - Cập nhật luồng giao hàng tối thiểu:
   - `assigned -> in_transit`
   - `in_transit -> delivered`
@@ -856,12 +1033,13 @@ npm run build
 
 Các phần sau vẫn nằm ngoài phạm vi hoàn thành hiện tại:
 
-- Chat nội bộ
-- Dashboard nghiệp vụ kho
-- Báo cáo tồn kho, nhập xuất, doanh thu
+- Chat nhóm và realtime chat đầy đủ
+- Dashboard nghiệp vụ kho nâng cao
+- Báo cáo tồn kho, nhập xuất, doanh thu ở mức phân tích sâu
 - Phê duyệt nhiều bước
 - Phân quyền object-level theo từng kho hoặc từng chứng từ
 - Tích hợp ngân hàng thật
+- Gán thủ công giao dịch ngân hàng `pending` vào hóa đơn khi nội dung chuyển khoản thiếu mã
 - Socket realtime cho nghiệp vụ kho
 
 ### Known issues kỹ thuật còn lại
@@ -873,9 +1051,10 @@ Các điểm dưới đây đã được automation review nhắc tới và **v�
 - Chưa có rate limit / lockout cho đăng nhập.
 - Phân quyền hiện vẫn là global permission, chưa có warehouse-level scope hay object-level scope.
 - CORS đang để khá rộng cho môi trường dev, chưa siết theo hướng production.
-- Module `Shipment` mới ở mức tối thiểu, chưa có timeline giao hàng sâu hoặc bằng chứng giao nhận.
-- Các module `Reports`, `Chat` vẫn chưa mounted đầy đủ nên chưa nên claim trong demo.
-- Module `Notifications/Tasks` mới ở mức tối thiểu, chưa có realtime và chưa có workflow phê duyệt nhiều bước.
+- Module `Shipment` mới ở mức demo có timeline trạng thái, chưa có bằng chứng giao nhận hoặc ảnh ký nhận.
+- Các module `Reports`, `Chat` đã mounted mức demo tối thiểu, nhưng chưa có phân tích nâng cao, presence/typing indicator hoặc object-level scope.
+- Module `Notifications/Tasks` mới ở mức demo tối thiểu, đã có realtime nhẹ nhưng chưa có workflow phê duyệt nhiều bước.
+- Module `Bank stub` mới là mô phỏng nội bộ, chưa kết nối ngân hàng thật hoặc đối soát tự động từ file sao kê.
 
 ## 18. Tiến độ hardening gần đây
 
@@ -883,10 +1062,13 @@ Các fix dưới đây được làm sau khi đối chiếu kết quả automati
 
 - Đã sửa bootstrap backend để `create_app()` tự nạp `backend/.env`, giúp `init-db` và `python run.py` dùng cùng cấu hình runtime thay vì dễ trỏ sang 2 database khác nhau.
 - Đã thêm regression test cho runtime env loading qua `WAREHOUSE_ENV_FILE` để khóa lỗi bootstrap trong các lần refactor sau.
-- Đã khóa lỗ hổng delegation của `users.manage`: user được ủy quyền quyền quản lý tài khoản không thể tạo hoặc gán tài khoản với role cao hơn quyền gốc của mình.
-- Đã chặn user được ủy quyền `users.manage` sửa hoặc xóa tài khoản thuộc role cấp cao hơn phạm vi được phép quản lý.
+- Đã khóa lỗ hổng delegation của `users.manage`: user được trao tạm quyền quản lý tài khoản không thể tạo hoặc gán tài khoản với role cao hơn quyền gốc của mình.
+- Đã chặn user được trao tạm quyền `users.manage` sửa hoặc xóa tài khoản thuộc role cấp cao hơn phạm vi được phép quản lý.
 - Đã harden luồng `stock_transfers` để `update / cancel / confirm` phải claim phiếu nháp trong transaction trước khi mutate, giảm rủi ro race condition làm lệch metadata và movement tồn kho.
 - Đã siết validate `GET /inventory/movements`: `reference_id` không hợp lệ giờ trả `400` rõ ràng thay vì âm thầm mở rộng kết quả truy vấn.
+- Đã khóa smoke test sidebar/route theo 5 vai trò demo để giảm rủi ro giảng viên đăng nhập nhầm role và gặp menu hoặc màn hình ngoài phạm vi quyền.
+- Đã bổ sung test cho bank transaction stub để khóa luồng mô phỏng, khớp hóa đơn, đối soát thành payment và chặn role không đủ quyền.
+- Đã bổ sung smoke test cho `/payments` và `/bank-reconciliation`.
 
 ## 19. Hướng đi tiếp theo được khuyến nghị
 
@@ -897,21 +1079,25 @@ Thứ tự tiếp theo an toàn nhất cho project:
    - lịch kiểm kê hoặc chứng từ kiểm kê định kỳ nếu cần nâng demo
    - tối ưu thêm UX cho các phiếu kho nhiều dòng
 2. Hoàn thiện sâu hơn Module 7:
-   - shipment detail đầy đủ hơn
-   - timeline giao hàng rõ hơn cho demo
-   - chốt scope shipper trước khi nối báo cáo
-3. Module 9 đã mở mức tối thiểu:
+   - bằng chứng giao nhận
+   - ghi chú thất bại/hoàn hàng
+   - scope shipper theo tuyến hoặc kho nếu cần
+3. Module 9-10 đã mở mức demo:
    - task nội bộ
-   - notification in-app
-4. Sau khi flow nghiệp vụ đủ dày mới quay lại harden tiếp:
+   - notification realtime nhẹ
+   - chat nội bộ 1-1 realtime nhẹ
+4. Module 11-12 đã mở mức demo:
+   - dashboard/báo cáo demo có KPI tổng quan điều hành
+   - bank transaction stub và đối soát thành payment
+5. Sau khi flow nghiệp vụ đủ dày mới quay lại harden tiếp:
    - token revocation
    - rate limiting
    - object-level authorization
-5. Cuối cùng mới mở rộng dashboard nghiệp vụ và báo cáo
+6. Cuối cùng mới mở rộng realtime/chat nhóm và báo cáo phân tích sâu
 
 ## 20. Ghi chú quan trọng
 
 - Project đang tối ưu cho **demo và nghiệm thu đồ án**, không phải cho production load lớn.
 - Luồng đang được giữ theo nguyên tắc **mỗi bước nhỏ nhưng chạy thật**.
 - Nếu dùng database cũ, sau khi cập nhật permission mới như `inventory.manage` hoặc hardening RBAC liên quan `users.manage`, nên chạy lại seed để đồng bộ quyền.
-- README này được cập nhật theo trạng thái code hiện tại đến thời điểm đã có **Module 6.5 - Inventory Hardening & Stocktake** cùng batch hardening sau automation review.
+- README này được cập nhật theo trạng thái code hiện tại đến thời điểm đã có **Module 12 - Bank stub / đối soát demo**, realtime nhẹ cho notification/chat và batch hardening sau automation review.

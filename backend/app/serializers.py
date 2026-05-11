@@ -2,7 +2,9 @@ from .constants import ROLE_DELEGATION_ALLOWED_TARGETS
 from .models import (
     AuditLog,
     BankAccount,
+    BankTransactionLog,
     Category,
+    Conversation,
     Customer,
     Employee,
     ExportReceipt,
@@ -14,6 +16,7 @@ from .models import (
     ImportReceipt,
     ImportReceiptDetail,
     InternalTask,
+    Message,
     Payment,
     Product,
     Role,
@@ -405,6 +408,39 @@ def serialize_export_receipt(receipt: ExportReceipt):
     }
 
 
+def build_shipment_timeline(shipment: Shipment):
+    timeline = [
+        {
+            "status": "assigned",
+            "label": "Đã giao shipper",
+            "occurred_at": shipment.assigned_at.isoformat() if shipment.assigned_at else None,
+            "done": shipment.assigned_at is not None,
+        },
+        {
+            "status": "in_transit",
+            "label": "Đang giao",
+            "occurred_at": shipment.in_transit_at.isoformat() if shipment.in_transit_at else None,
+            "done": shipment.in_transit_at is not None,
+        },
+        {
+            "status": "delivered",
+            "label": "Đã giao xong",
+            "occurred_at": shipment.delivered_at.isoformat() if shipment.delivered_at else None,
+            "done": shipment.delivered_at is not None,
+        },
+    ]
+    if shipment.cancelled_at:
+        timeline.append(
+            {
+                "status": "cancelled",
+                "label": "Đã hủy",
+                "occurred_at": shipment.cancelled_at.isoformat(),
+                "done": True,
+            }
+        )
+    return timeline
+
+
 def serialize_shipment(shipment: Shipment):
     receipt = shipment.export_receipt
     total_quantity = sum(detail.quantity for detail in receipt.details) if receipt else 0
@@ -431,6 +467,7 @@ def serialize_shipment(shipment: Shipment):
         "in_transit_at": shipment.in_transit_at.isoformat() if shipment.in_transit_at else None,
         "delivered_at": shipment.delivered_at.isoformat() if shipment.delivered_at else None,
         "cancelled_at": shipment.cancelled_at.isoformat() if shipment.cancelled_at else None,
+        "timeline": build_shipment_timeline(shipment),
         "created_at": shipment.created_at.isoformat() if shipment.created_at else None,
         "updated_at": shipment.updated_at.isoformat() if shipment.updated_at else None,
         "details": [serialize_export_receipt_detail(detail) for detail in receipt.details] if receipt else [],
@@ -478,6 +515,34 @@ def serialize_payment(payment: Payment):
     }
 
 
+def serialize_bank_transaction(transaction: BankTransactionLog):
+    invoice = transaction.invoice
+    return {
+        "id": transaction.id,
+        "transaction_code": transaction.transaction_code,
+        "invoice_id": transaction.invoice_id,
+        "invoice_code": invoice.invoice_code if invoice else None,
+        "invoice_status": invoice.status if invoice else None,
+        "bank_account_id": transaction.bank_account_id,
+        "bank_name": transaction.bank_account.bank_name if transaction.bank_account else None,
+        "bank_account_number": (
+            transaction.bank_account.account_number if transaction.bank_account else None
+        ),
+        "created_by": transaction.created_by,
+        "created_by_name": transaction.creator.full_name if transaction.creator else None,
+        "reconciled_by": transaction.reconciled_by,
+        "reconciled_by_name": transaction.reconciler.full_name if transaction.reconciler else None,
+        "amount": transaction.amount,
+        "description": transaction.description,
+        "status": transaction.status,
+        "received_at": transaction.received_at.isoformat() if transaction.received_at else None,
+        "reconciled_at": transaction.reconciled_at.isoformat() if transaction.reconciled_at else None,
+        "note": transaction.note,
+        "created_at": transaction.created_at.isoformat() if transaction.created_at else None,
+        "updated_at": transaction.updated_at.isoformat() if transaction.updated_at else None,
+    }
+
+
 def serialize_notification(notification: Notification):
     return {
         "id": notification.id,
@@ -513,6 +578,38 @@ def serialize_task(task: InternalTask):
         "cancelled_at": task.cancelled_at.isoformat() if task.cancelled_at else None,
         "created_at": task.created_at.isoformat() if task.created_at else None,
         "updated_at": task.updated_at.isoformat() if task.updated_at else None,
+    }
+
+
+def serialize_chat_message(message: Message):
+    return {
+        "id": message.id,
+        "conversation_id": message.conversation_id,
+        "sender_id": message.sender_id,
+        "sender_name": message.sender.full_name if message.sender else None,
+        "content": message.content,
+        "sent_at": message.sent_at.isoformat() if message.sent_at else None,
+        "created_at": message.created_at.isoformat() if message.created_at else None,
+        "updated_at": message.updated_at.isoformat() if message.updated_at else None,
+    }
+
+
+def serialize_chat_conversation(conversation: Conversation, current_user_id: int):
+    peer = None
+    for participant in conversation.participants:
+        if participant.user_id != current_user_id:
+            peer = participant.user
+            break
+
+    last_message = conversation.messages[-1] if conversation.messages else None
+    return {
+        "id": conversation.id,
+        "conversation_type": conversation.conversation_type,
+        "participant_ids": [participant.user_id for participant in conversation.participants],
+        "peer": serialize_user_summary(peer) if peer else None,
+        "last_message": serialize_chat_message(last_message) if last_message else None,
+        "created_at": conversation.created_at.isoformat() if conversation.created_at else None,
+        "updated_at": conversation.updated_at.isoformat() if conversation.updated_at else None,
     }
 
 

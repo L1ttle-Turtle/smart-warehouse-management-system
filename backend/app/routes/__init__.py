@@ -1,6 +1,8 @@
 from .catalogs import catalogs_bp
 from .auth import auth_bp
+from .bank_transactions import bank_transactions_bp
 from .communications import communications_bp
+from .chat import chat_bp
 from .export_receipts import export_receipts_bp
 from .import_receipts import import_receipts_bp
 from .insights import insights_bp
@@ -10,6 +12,7 @@ from .payments import payments_bp
 from .people import people_bp
 from .products import products_bp
 from .rbac import rbac_bp
+from .reports import reports_bp
 from .shipments import shipments_bp
 from .stock_transfers import stock_transfers_bp
 from .stocktakes import stocktakes_bp
@@ -18,7 +21,9 @@ from .warehouses import warehouses_bp
 
 def register_blueprints(app):
     app.register_blueprint(auth_bp)
+    app.register_blueprint(bank_transactions_bp)
     app.register_blueprint(catalogs_bp)
+    app.register_blueprint(chat_bp)
     app.register_blueprint(communications_bp)
     app.register_blueprint(export_receipts_bp)
     app.register_blueprint(import_receipts_bp)
@@ -29,6 +34,7 @@ def register_blueprints(app):
     app.register_blueprint(people_bp)
     app.register_blueprint(products_bp)
     app.register_blueprint(rbac_bp)
+    app.register_blueprint(reports_bp, url_prefix="/reports")
     app.register_blueprint(shipments_bp)
     app.register_blueprint(stock_transfers_bp)
     app.register_blueprint(stocktakes_bp)

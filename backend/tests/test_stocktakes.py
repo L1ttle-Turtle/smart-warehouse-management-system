@@ -81,6 +81,7 @@ def test_create_stocktake_draft_does_not_change_inventory(client, auth_headers, 
 
     assert response.status_code == 201
     payload = response.get_json()["item"]
+    stocktake_id = payload["id"]
     assert payload["status"] == "draft"
     assert payload["details"][0]["system_quantity"] == context["starting_printer_quantity"]
     assert payload["details"][0]["difference_quantity"] == 1
@@ -91,7 +92,10 @@ def test_create_stocktake_draft_does_not_change_inventory(client, auth_headers, 
             location_id=context["primary_location_id"],
             product_id=context["printer_id"],
         ).first()
-        movement = InventoryMovement.query.filter_by(reference_type="stocktake").first()
+        movement = InventoryMovement.query.filter_by(
+            reference_type="stocktake",
+            reference_id=stocktake_id,
+        ).first()
 
         assert inventory_row.quantity == context["starting_printer_quantity"]
         assert movement is None

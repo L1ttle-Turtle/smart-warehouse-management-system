@@ -7,7 +7,9 @@ import AppShell from './components/AppShell';
 import { useAuth } from './auth/useAuth';
 
 const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage'));
+const BankReconciliationPage = lazy(() => import('./pages/BankReconciliationPage'));
 const CatalogsPage = lazy(() => import('./pages/CatalogsPage'));
+const ChatPage = lazy(() => import('./pages/ChatPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const DelegationPage = lazy(() => import('./pages/DelegationPage'));
 const EmployeesPage = lazy(() => import('./pages/EmployeesPage'));
@@ -18,8 +20,10 @@ const InventoryPage = lazy(() => import('./pages/InventoryPage'));
 const InvoicesPage = lazy(() => import('./pages/InvoicesPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const PaymentsPage = lazy(() => import('./pages/PaymentsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const ProductsPage = lazy(() => import('./pages/ProductsPage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 const RolesPage = lazy(() => import('./pages/RolesPage'));
 const ShipmentsPage = lazy(() => import('./pages/ShipmentsPage'));
 const StocktakesPage = lazy(() => import('./pages/StocktakesPage'));
@@ -166,6 +170,22 @@ function App() {
             )}
           />
           <Route
+            path="payments"
+            element={(
+              <ProtectedRoute requiredPermission="invoices.view">
+                <PaymentsPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="bank-reconciliation"
+            element={(
+              <ProtectedRoute requiredPermission="invoices.view">
+                <BankReconciliationPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
             path="notifications"
             element={(
               <ProtectedRoute
@@ -175,6 +195,22 @@ function App() {
                 ]}
               >
                 <NotificationsPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="reports"
+            element={(
+              <ProtectedRoute requiredPermission="reports.view">
+                <ReportsPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="chat"
+            element={(
+              <ProtectedRoute requiredPermission="chat.view">
+                <ChatPage />
               </ProtectedRoute>
             )}
           />

@@ -213,10 +213,8 @@ def list_inventory():
     query = apply_inventory_sort(apply_inventory_filters(build_inventory_query()))
 
     page = parse_positive_int_arg("page", 1)
-    per_page = parse_positive_int_arg(
-        "per_page",
-        parse_positive_int_arg("page_size", 10),
-    )
+    page_size_default = parse_positive_int_arg("page_size", 10, maximum=500)
+    per_page = parse_positive_int_arg("per_page", page_size_default, maximum=500)
     has_pagination_args = any(
         request.args.get(name) is not None
         for name in {"page", "per_page", "page_size"}

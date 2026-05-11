@@ -1,7 +1,23 @@
 import os
 
 
+DEFAULT_FRONTEND_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+
+def parse_cors_origins(value):
+    origins = [origin.strip() for origin in (value or "").split(",") if origin.strip()]
+    for origin in DEFAULT_FRONTEND_ORIGINS:
+        if origin not in origins:
+            origins.append(origin)
+    return origins
+
+
 def get_runtime_config():
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    socketio_origins = os.getenv("SOCKETIO_CORS_ALLOWED_ORIGINS", frontend_url)
     return {
         "SECRET_KEY": os.getenv(
             "SECRET_KEY",
@@ -15,11 +31,8 @@ def get_runtime_config():
             "DATABASE_URL",
             "sqlite:///warehouse.db",
         ),
-        "FRONTEND_URL": os.getenv("FRONTEND_URL", "http://localhost:5173"),
-        "SOCKETIO_CORS_ALLOWED_ORIGINS": os.getenv(
-            "SOCKETIO_CORS_ALLOWED_ORIGINS",
-            os.getenv("FRONTEND_URL", "http://localhost:5173"),
-        ),
+        "FRONTEND_URL": frontend_url,
+        "SOCKETIO_CORS_ALLOWED_ORIGINS": parse_cors_origins(socketio_origins),
         "DEFAULT_PASSWORD": os.getenv("DEFAULT_PASSWORD", "Password123!"),
     }
 
@@ -30,7 +43,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = "sqlite:///warehouse.db"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     FRONTEND_URL = "http://localhost:5173"
-    SOCKETIO_CORS_ALLOWED_ORIGINS = FRONTEND_URL
+    SOCKETIO_CORS_ALLOWED_ORIGINS = DEFAULT_FRONTEND_ORIGINS
     DEFAULT_PASSWORD = "Password123!"
 
 

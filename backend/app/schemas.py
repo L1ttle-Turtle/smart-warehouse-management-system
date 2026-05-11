@@ -290,6 +290,19 @@ class PaymentCreateSchema(Schema):
     note = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
 
 
+class BankTransactionSimulateSchema(Schema):
+    invoice_code = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=30))
+    bank_account_id = fields.Integer(load_default=None, allow_none=True)
+    amount = fields.Float(required=True, validate=validate.Range(min=0.0001))
+    description = fields.String(required=True, validate=validate.Length(min=1, max=255))
+    received_at = fields.DateTime(load_default=None, allow_none=True)
+    note = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+
+
+class BankTransactionReconcileSchema(Schema):
+    note = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+
+
 class NotificationBroadcastSchema(Schema):
     title = fields.String(required=True, validate=validate.Length(min=1, max=160))
     content = fields.String(required=True, validate=validate.Length(min=1, max=500))
@@ -317,6 +330,14 @@ class TaskStatusSchema(Schema):
         required=True,
         validate=validate.OneOf(["todo", "in_progress", "done", "cancelled"]),
     )
+
+
+class ChatDirectConversationSchema(Schema):
+    user_id = fields.Integer(required=True)
+
+
+class ChatMessageSchema(Schema):
+    content = fields.String(required=True, validate=validate.Length(min=1, max=1000))
 
 
 class StockTransferItemSchema(Schema):

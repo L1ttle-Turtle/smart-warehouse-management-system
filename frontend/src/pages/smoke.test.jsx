@@ -4,10 +4,13 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import api from '../api/client';
+import App from '../App';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/ProtectedRoute';
 import AuditLogsPage from './AuditLogsPage';
+import BankReconciliationPage from './BankReconciliationPage';
 import CatalogsPage from './CatalogsPage';
+import ChatPage from './ChatPage';
 import DelegationPage from './DelegationPage';
 import EmployeesPage from './EmployeesPage';
 import ExportReceiptsPage from './ExportReceiptsPage';
@@ -16,8 +19,10 @@ import InventoryPage from './InventoryPage';
 import InvoicesPage from './InvoicesPage';
 import LoginPage from './LoginPage';
 import NotificationsPage from './NotificationsPage';
+import PaymentsPage from './PaymentsPage';
 import ProfilePage from './ProfilePage';
 import ProductsPage from './ProductsPage';
+import ReportsPage from './ReportsPage';
 import RolesPage from './RolesPage';
 import ShipmentsPage from './ShipmentsPage';
 import StocktakesPage from './StocktakesPage';
@@ -56,6 +61,8 @@ const adminPermissions = [
   'locations.manage',
   'products.view',
   'products.manage',
+  'reports.view',
+  'chat.view',
   'categories.view',
   'categories.manage',
   'suppliers.view',
@@ -94,6 +101,8 @@ const managerPermissions = [
   'locations.manage',
   'products.view',
   'products.manage',
+  'reports.view',
+  'chat.view',
   'categories.view',
   'categories.manage',
   'suppliers.view',
@@ -111,6 +120,8 @@ const accountantPermissions = [
   'invoices.view',
   'invoices.manage',
   'notifications.view',
+  'reports.view',
+  'chat.view',
   'tasks.view',
 ];
 
@@ -131,6 +142,7 @@ const staffPermissions = [
   'warehouses.view',
   'locations.view',
   'products.view',
+  'chat.view',
 ];
 
 const shipperPermissions = [
@@ -139,7 +151,167 @@ const shipperPermissions = [
   'shipments.view',
   'shipments.manage',
   'tasks.view',
+  'chat.view',
 ];
+
+const demoRoleProfiles = {
+  admin: {
+    id: 1,
+    full_name: 'Admin User',
+    role: 'admin',
+    permissions: adminPermissions,
+    visibleMenus: [
+      'Dashboard cá nhân',
+      'Tài khoản',
+      'Nhân sự',
+      'Sản phẩm',
+      'Kho bãi',
+      'Nhập kho',
+      'Xuất kho',
+      'Điều chuyển kho',
+      'Vận chuyển',
+      'Hóa đơn',
+      'Thanh toán',
+      'Đối soát ngân hàng',
+      'Công việc & thông báo',
+      'Báo cáo',
+      'Chat nội bộ',
+      'Tồn kho',
+      'Kiểm kê kho',
+      'Danh mục nền',
+      'Trao quyền tạm thời',
+      'Audit log',
+      'Vai trò và quyền',
+      'Hồ sơ cá nhân',
+    ],
+    hiddenMenus: [],
+  },
+  manager: {
+    id: 2,
+    full_name: 'Manager User',
+    role: 'manager',
+    permissions: managerPermissions,
+    visibleMenus: [
+      'Dashboard cá nhân',
+      'Nhân sự',
+      'Sản phẩm',
+      'Kho bãi',
+      'Nhập kho',
+      'Xuất kho',
+      'Điều chuyển kho',
+      'Vận chuyển',
+      'Hóa đơn',
+      'Thanh toán',
+      'Đối soát ngân hàng',
+      'Công việc & thông báo',
+      'Báo cáo',
+      'Chat nội bộ',
+      'Tồn kho',
+      'Kiểm kê kho',
+      'Danh mục nền',
+      'Trao quyền tạm thời',
+      'Audit log',
+      'Hồ sơ cá nhân',
+    ],
+    hiddenMenus: ['Tài khoản', 'Vai trò và quyền'],
+  },
+  staff: {
+    id: 3,
+    full_name: 'Staff User',
+    role: 'staff',
+    permissions: staffPermissions,
+    visibleMenus: [
+      'Dashboard cá nhân',
+      'Sản phẩm',
+      'Kho bãi',
+      'Nhập kho',
+      'Xuất kho',
+      'Điều chuyển kho',
+      'Vận chuyển',
+      'Công việc & thông báo',
+      'Chat nội bộ',
+      'Tồn kho',
+      'Kiểm kê kho',
+      'Hồ sơ cá nhân',
+    ],
+    hiddenMenus: [
+      'Tài khoản',
+      'Nhân sự',
+      'Hóa đơn',
+      'Thanh toán',
+      'Đối soát ngân hàng',
+      'Báo cáo',
+      'Danh mục nền',
+      'Trao quyền tạm thời',
+      'Audit log',
+      'Vai trò và quyền',
+    ],
+  },
+  accountant: {
+    id: 4,
+    full_name: 'Accountant User',
+    role: 'accountant',
+    permissions: accountantPermissions,
+    visibleMenus: [
+      'Dashboard cá nhân',
+      'Hóa đơn',
+      'Thanh toán',
+      'Đối soát ngân hàng',
+      'Công việc & thông báo',
+      'Báo cáo',
+      'Chat nội bộ',
+      'Danh mục nền',
+      'Hồ sơ cá nhân',
+    ],
+    hiddenMenus: [
+      'Tài khoản',
+      'Nhân sự',
+      'Sản phẩm',
+      'Kho bãi',
+      'Nhập kho',
+      'Xuất kho',
+      'Điều chuyển kho',
+      'Vận chuyển',
+      'Tồn kho',
+      'Kiểm kê kho',
+      'Trao quyền tạm thời',
+      'Audit log',
+      'Vai trò và quyền',
+    ],
+  },
+  shipper: {
+    id: 5,
+    full_name: 'Shipper User',
+    role: 'shipper',
+    permissions: shipperPermissions,
+    visibleMenus: [
+      'Dashboard cá nhân',
+      'Vận chuyển',
+      'Công việc & thông báo',
+      'Chat nội bộ',
+      'Hồ sơ cá nhân',
+    ],
+    hiddenMenus: [
+      'Tài khoản',
+      'Nhân sự',
+      'Sản phẩm',
+      'Kho bãi',
+      'Nhập kho',
+      'Xuất kho',
+      'Điều chuyển kho',
+      'Hóa đơn',
+      'Thanh toán',
+      'Đối soát ngân hàng',
+      'Báo cáo',
+      'Tồn kho',
+      'Kiểm kê kho',
+      'Danh mục nền',
+      'Trao quyền tạm thời',
+      'Audit log',
+      'Vai trò và quyền',
+    ],
+  },
+};
 
 function buildAuthState(overrides = {}) {
   const permissions = overrides.permissions || adminPermissions;
@@ -186,6 +358,75 @@ vi.mock('../api/client', () => ({
                 full_name: 'Accountant User',
                 role_name: 'accountant',
                 status: 'active',
+              },
+            ],
+          },
+        });
+      }
+
+      if (url === '/chat/users') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 3,
+                username: 'staff',
+                full_name: 'Staff User',
+                role_name: 'staff',
+                status: 'active',
+              },
+              {
+                id: 4,
+                username: 'accountant',
+                full_name: 'Accountant User',
+                role_name: 'accountant',
+                status: 'active',
+              },
+            ],
+          },
+        });
+      }
+
+      if (url === '/chat/conversations') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                conversation_type: 'direct',
+                peer: {
+                  id: 3,
+                  username: 'staff',
+                  full_name: 'Staff User',
+                  role_name: 'staff',
+                  status: 'active',
+                },
+                last_message: {
+                  id: 1,
+                  conversation_id: 1,
+                  sender_id: 2,
+                  sender_name: 'Manager User',
+                  content: 'Nhờ kiểm tra tồn thấp trước ca xuất hàng.',
+                  sent_at: '2026-05-02T08:10:00',
+                },
+                updated_at: '2026-05-02T08:10:00',
+              },
+            ],
+          },
+        });
+      }
+
+      if (url === '/chat/conversations/1/messages') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                conversation_id: 1,
+                sender_id: 2,
+                sender_name: 'Manager User',
+                content: 'Nhờ kiểm tra tồn thấp trước ca xuất hàng.',
+                sent_at: '2026-05-02T08:10:00',
               },
             ],
           },
@@ -239,6 +480,113 @@ vi.mock('../api/client', () => ({
             total: 1,
             page: 1,
             page_size: 20,
+          },
+        });
+      }
+
+      if (url === '/reports/summary') {
+        return Promise.resolve({
+          data: {
+            metrics: [
+              {
+                key: 'total_inventory_quantity',
+                label: 'Tổng tồn kho',
+                value: 314,
+                suffix: 'đơn vị',
+                tone: 'primary',
+              },
+              {
+                key: 'stock_alert_lines',
+                label: 'Dòng tồn cần chú ý',
+                value: 3,
+                suffix: 'dòng',
+                tone: 'warning',
+              },
+              {
+                key: 'draft_documents',
+                label: 'Chứng từ nháp',
+                value: 4,
+                suffix: 'phiếu',
+                tone: 'teal',
+              },
+              {
+                key: 'active_shipments',
+                label: 'Đơn đang giao',
+                value: 1,
+                suffix: 'đơn',
+                tone: 'success',
+              },
+              {
+                key: 'total_revenue',
+                label: 'Doanh thu hóa đơn',
+                value: 4200000,
+                format: 'currency',
+                tone: 'danger',
+              },
+              {
+                key: 'outstanding_amount',
+                label: 'Công nợ còn lại',
+                value: 1200000,
+                format: 'currency',
+                tone: 'warning',
+              },
+            ],
+          },
+        });
+      }
+
+      if (url === '/reports/inventory-by-warehouse') {
+        return Promise.resolve({
+          data: {
+            items: [
+              { warehouse_name: 'Kho Trung Tam', quantity: 184 },
+              { warehouse_name: 'Kho Mien Nam', quantity: 130 },
+            ],
+          },
+        });
+      }
+
+      if (url === '/reports/stock-movement') {
+        return Promise.resolve({
+          data: {
+            items: [
+              { month: '2026-05', import_quantity: 45, export_quantity: 19 },
+            ],
+          },
+        });
+      }
+
+      if (url === '/reports/top-products') {
+        return Promise.resolve({
+          data: {
+            items: [
+              { product_id: 1, product_name: 'Máy quét mã vạch', quantity: 12 },
+            ],
+          },
+        });
+      }
+
+      if (url === '/reports/shipment-performance') {
+        return Promise.resolve({
+          data: {
+            items: [
+              { status: 'assigned', status_label: 'Đã phân công', count: 1 },
+              { status: 'delivered', status_label: 'Đã giao', count: 2 },
+            ],
+          },
+        });
+      }
+
+      if (url === '/reports/revenue') {
+        return Promise.resolve({
+          data: {
+            revenue: [
+              { month: '2026-05', revenue: 4200000 },
+            ],
+            payment_status: [
+              { status: 'unpaid', count: 1 },
+              { status: 'paid', count: 1 },
+            ],
           },
         });
       }
@@ -816,6 +1164,60 @@ vi.mock('../api/client', () => ({
         });
       }
 
+      if (url === '/payments') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                payment_code: 'PAY-DEMO-001',
+                invoice_id: 1,
+                invoice_code: 'INV-DEMO-001',
+                invoice_status: 'partial',
+                bank_account_id: 1,
+                bank_name: 'Vietcombank',
+                bank_account_number: '0123456789',
+                created_by_name: 'Accountant User',
+                amount: 900000,
+                payment_method: 'bank_transfer',
+                paid_at: '2026-04-29T10:00:00',
+                note: 'Thanh toán demo',
+              },
+            ],
+            total: 1,
+            page: 1,
+            page_size: 10,
+          },
+        });
+      }
+
+      if (url === '/bank-transactions') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                transaction_code: 'BNK-DEMO-001',
+                invoice_id: 1,
+                invoice_code: 'INV-DEMO-001',
+                invoice_status: 'unpaid',
+                bank_account_id: 1,
+                bank_name: 'Vietcombank',
+                bank_account_number: '0123456789',
+                amount: 700000,
+                description: 'Khách chuyển khoản cho INV-DEMO-001',
+                status: 'matched',
+                received_at: '2026-04-29T11:00:00',
+                note: 'Đã khớp hóa đơn, chờ đối soát',
+              },
+            ],
+            total: 1,
+            page: 1,
+            page_size: 10,
+          },
+        });
+      }
+
       if (url === '/warehouses') {
         return Promise.resolve({
           data: {
@@ -1286,6 +1688,37 @@ function renderWithProviders(node, route = '/') {
   );
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function exactText(value) {
+  return new RegExp(`^${escapeRegExp(value)}$`, 'i');
+}
+
+function setDemoRole(roleKey) {
+  const profile = demoRoleProfiles[roleKey];
+  authState = buildAuthState({
+    permissions: profile.permissions,
+    user: {
+      id: profile.id,
+      full_name: profile.full_name,
+      role: profile.role,
+    },
+  });
+}
+
+function renderDemoShell(roleKey) {
+  setDemoRole(roleKey);
+  return renderWithProviders(
+    <Routes>
+      <Route path="/" element={<AppShell />}>
+        <Route index element={<div>Dashboard</div>} />
+      </Route>
+    </Routes>,
+  );
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   authState = buildAuthState();
@@ -1319,17 +1752,80 @@ test('filters navigation items by permission', () => {
   expect(screen.getByText(/^Nhập kho$/i)).toBeInTheDocument();
   expect(screen.getByText(/^Xuất kho$/i)).toBeInTheDocument();
   expect(screen.getByText(/^Danh mục nền$/i)).toBeInTheDocument();
-  expect(screen.getByText(/^Ủy quyền quyền hạn$/i)).toBeInTheDocument();
+  expect(screen.getByText(/^Trao quyền tạm thời$/i)).toBeInTheDocument();
   expect(screen.getByText(/^Audit log$/i)).toBeInTheDocument();
   expect(screen.queryByText(/^Tài khoản$/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/^Vai trò và quyền$/i)).not.toBeInTheDocument();
 });
 
+test('demo role sidebars match the accepted navigation narrative', () => {
+  Object.entries(demoRoleProfiles).forEach(([roleKey, profile]) => {
+    const view = renderDemoShell(roleKey);
+
+    profile.visibleMenus.forEach((label) => {
+      expect(screen.getByText(exactText(label))).toBeInTheDocument();
+    });
+
+    profile.hiddenMenus.forEach((label) => {
+      expect(screen.queryByText(exactText(label))).not.toBeInTheDocument();
+    });
+
+    view.unmount();
+  });
+});
+
+test('demo role routes allow intended screens and block out-of-scope screens', async () => {
+  const routeCases = [
+    {
+      role: 'admin',
+      allowed: { path: '/roles', text: /Ma trận vai trò và quyền/i },
+      forbidden: null,
+    },
+    {
+      role: 'manager',
+      allowed: { path: '/reports', text: /Tổng quan điều hành/i },
+      forbidden: '/users',
+    },
+    {
+      role: 'staff',
+      allowed: { path: '/inventory', text: /Tồn kho/i },
+      forbidden: '/reports',
+    },
+    {
+      role: 'accountant',
+      allowed: { path: '/invoices', text: /^Hóa đơn$/i },
+      forbidden: '/inventory',
+    },
+    {
+      role: 'shipper',
+      allowed: { path: '/shipments', text: /Vận chuyển/i },
+      forbidden: '/invoices',
+    },
+  ];
+
+  for (const routeCase of routeCases) {
+    setDemoRole(routeCase.role);
+    const allowedView = renderWithProviders(<App />, routeCase.allowed.path);
+    await waitFor(() => {
+      expect(screen.getAllByText(routeCase.allowed.text).length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByText(/^403$/i)).not.toBeInTheDocument();
+    allowedView.unmount();
+
+    if (routeCase.forbidden) {
+      setDemoRole(routeCase.role);
+      const forbiddenView = renderWithProviders(<App />, routeCase.forbidden);
+      await waitFor(() => expect(screen.getByText(/^403$/i)).toBeInTheDocument());
+      forbiddenView.unmount();
+    }
+  }
+}, 20000);
+
 test('renders role matrix page', async () => {
   renderWithProviders(<RolesPage />, '/roles');
   await waitFor(() => expect(screen.getByText(/Ma trận vai trò và quyền/i)).toBeInTheDocument());
-  expect(screen.getByText(/^admin$/i)).toBeInTheDocument();
-  expect(screen.getAllByText(/roles.view/i).length).toBeGreaterThan(0);
+  await waitFor(() => expect(screen.getByText(/^admin$/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getAllByText(/roles.view/i).length).toBeGreaterThan(0));
 });
 
 test('renders users page', async () => {
@@ -1390,9 +1886,9 @@ test('catalogs page redirects accountant to first allowed tab for invalid query 
 
 test('renders delegation page', async () => {
   renderWithProviders(<DelegationPage />, '/delegations');
-  await waitFor(() => expect(screen.getByText(/Ủy quyền quyền hạn theo từng user/i)).toBeInTheDocument());
-  expect(screen.getByText(/Chọn user nhận ủy quyền/i)).toBeInTheDocument();
-  await waitFor(() => expect(screen.getByText(/Bảng kéo thả ủy quyền cho user đã chọn/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText(/Trao quyền tạm thời cho từng nhân sự/i)).toBeInTheDocument());
+  expect(screen.getByText(/Chọn nhân sự nhận quyền/i)).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByText(/Bảng kéo thả quyền cho nhân sự đã chọn/i)).toBeInTheDocument());
   expect(screen.getAllByText(/Manager User/i).length).toBeGreaterThan(0);
 });
 
@@ -1735,6 +2231,62 @@ test('accountant can render invoices page for demo review', async () => {
   await waitFor(() => expect(screen.getAllByText(/INV-DEMO-001/i).length).toBeGreaterThan(0));
   expect(screen.getByRole('button', { name: /Tạo hóa đơn/i })).toBeInTheDocument();
   expect(screen.getByText(/Chi tiết hóa đơn/i)).toBeInTheDocument();
+});
+
+test('renders payments page with payment history filters', async () => {
+  renderWithProviders(<PaymentsPage />, '/payments');
+
+  await waitFor(() => expect(screen.getByRole('heading', { name: /^Thanh toán$/i })).toBeInTheDocument());
+  await waitFor(() => expect(screen.getAllByText(/PAY-DEMO-001/i).length).toBeGreaterThan(0));
+  expect(screen.getByText(/Chuyển khoản/i)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^Lọc$/i })).toBeInTheDocument();
+});
+
+test('renders bank reconciliation page and can trigger reconcile action', async () => {
+  renderWithProviders(<BankReconciliationPage />, '/bank-reconciliation');
+
+  await waitFor(() => expect(screen.getByRole('heading', { name: /^Đối soát ngân hàng$/i })).toBeInTheDocument());
+  await waitFor(() => expect(screen.getAllByText(/BNK-DEMO-001/i).length).toBeGreaterThan(0));
+  expect(screen.getAllByText(/Đã khớp hóa đơn/i).length).toBeGreaterThan(0);
+  expect(screen.getByRole('button', { name: /Mô phỏng giao dịch/i })).toBeInTheDocument();
+
+  fireEvent.click(screen.getAllByRole('button', { name: /Đối soát/i })[0]);
+  await waitFor(() => expect(screen.getAllByRole('button', { name: /Đối soát/i }).length).toBeGreaterThan(1));
+  const reconcileButtons = screen.getAllByRole('button', { name: /Đối soát/i });
+  fireEvent.click(reconcileButtons[reconcileButtons.length - 1]);
+
+  await waitFor(() => expect(api.post).toHaveBeenCalledWith(
+    '/bank-transactions/1/reconcile',
+    expect.objectContaining({
+      note: expect.stringContaining('BNK-DEMO-001'),
+    }),
+  ));
+});
+
+test('renders reports page with business summary charts', async () => {
+  renderWithProviders(<ReportsPage />, '/reports');
+
+  await waitFor(() => expect(screen.getByText(/Tổng quan điều hành/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText(/Tổng tồn kho/i)).toBeInTheDocument());
+  expect(screen.getByText(/Dòng tồn cần chú ý/i)).toBeInTheDocument();
+  expect(screen.getByText(/Công nợ còn lại/i)).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByText(/Tồn kho theo kho/i)).toBeInTheDocument());
+  expect(screen.getByText(/Nhập xuất theo tháng/i)).toBeInTheDocument();
+  expect(screen.getByText(/Trạng thái vận chuyển/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/Doanh thu hóa đơn/i).length).toBeGreaterThan(0);
+  await waitFor(() => expect(screen.getByText(/Máy quét mã vạch/i)).toBeInTheDocument());
+  expect(screen.getByText(/Chưa thanh toán/i)).toBeInTheDocument();
+  expect(screen.getByText(/Đã thanh toán/i)).toBeInTheDocument();
+});
+
+test('renders chat page with direct conversation and send action', async () => {
+  renderWithProviders(<ChatPage />, '/chat');
+
+  await waitFor(() => expect(screen.getByText(/Chat nội bộ/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getAllByText(/Staff User/i).length).toBeGreaterThan(0));
+  expect(screen.getByText(/Nhờ kiểm tra tồn thấp/i)).toBeInTheDocument();
+  expect(screen.getByPlaceholderText(/Nhập nội dung cần trao đổi/i)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Gửi tin/i })).toBeInTheDocument();
 });
 
 test('renders notifications page with tasks and notification actions', async () => {

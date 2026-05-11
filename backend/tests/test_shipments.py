@@ -120,6 +120,12 @@ def test_manager_can_create_shipment_from_confirmed_export_receipt(client, auth_
     assert payload["status"] == "assigned"
     assert payload["export_receipt_id"] == context["receipt_id"]
     assert payload["shipper_id"] == shipper_context["shipper_id"]
+    assert [item["status"] for item in payload["timeline"][:3]] == [
+        "assigned",
+        "in_transit",
+        "delivered",
+    ]
+    assert payload["timeline"][0]["done"] is True
 
 
 def test_create_shipment_rejects_draft_export_receipt(client, auth_headers, app):
@@ -161,7 +167,9 @@ def test_shipper_can_update_own_shipment_but_not_other_shipments(client, auth_he
     )
 
     assert own_response.status_code == 200
-    assert own_response.get_json()["item"]["status"] == "in_transit"
+    own_payload = own_response.get_json()["item"]
+    assert own_payload["status"] == "in_transit"
+    assert any(item["status"] == "in_transit" and item["done"] for item in own_payload["timeline"])
 
     second_shipper_id = create_additional_shipper(app, "shipper3")
     receipt_context = create_confirmed_export_receipt(app, "EXP-SHP-TST-003")
