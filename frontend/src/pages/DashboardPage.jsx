@@ -70,7 +70,7 @@ function DashboardPage() {
         </Typography.Title>
         <Typography.Paragraph className="page-subtitle">
           Trang này tập trung vào người đang đăng nhập: thông tin phiên, hồ sơ nhân sự,
-          quyền đang có, tình trạng ủy quyền và hoạt động gần đây.
+          quyền đang có, quyền tạm thời và hoạt động gần đây.
         </Typography.Paragraph>
       </Card>
 
@@ -88,7 +88,7 @@ function DashboardPage() {
           <MetricCard label="Người dùng hiện tại" value={data.profile.full_name || '-'} helper={data.profile.role || '-'} />
         </Col>
         <Col xs={24} md={8}>
-          <MetricCard label="Tổng quyền đang có" value={data.permission_summary.total_permissions} helper="Bao gồm quyền vai trò và quyền được ủy quyền" />
+          <MetricCard label="Tổng quyền đang có" value={data.permission_summary.total_permissions} helper="Bao gồm quyền vai trò và quyền tạm thời được nhận" />
         </Col>
         <Col xs={24} md={8}>
           <MetricCard label="Lần đăng nhập gần nhất" value={data.profile.last_login_at ? new Date(data.profile.last_login_at).toLocaleString('vi-VN') : '-'} />
@@ -112,7 +112,7 @@ function DashboardPage() {
         <Col xs={24} lg={12}>
           <Card className="page-card" styles={{ body: { padding: 28 } }}>
             <Typography.Title level={4} style={{ marginTop: 0 }}>
-              Tóm tắt ủy quyền
+              Tóm tắt quyền tạm thời
             </Typography.Title>
             <Row gutter={[12, 12]}>
               <Col span={8}>

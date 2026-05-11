@@ -144,7 +144,7 @@ function PermissionCard({ item, column, onDragStart, onDelegate, onRevoke }) {
         ) : null}
         {column === 'available' ? (
           <Button size="small" type="primary" onClick={() => onDelegate(item.permission_id)}>
-            Ủy quyền
+            Trao quyền
           </Button>
         ) : (
           <Button size="small" danger disabled={item.status !== 'active'} onClick={() => onRevoke(item.id)}>
@@ -199,7 +199,7 @@ function DelegationPage() {
       setSelectedUserDelegations(response.data.items || []);
     } catch (requestError) {
       message.error(
-        requestError.response?.data?.message || 'Không tải được lịch sử ủy quyền của user đã chọn.',
+        requestError.response?.data?.message || 'Không tải được lịch sử trao quyền của người đã chọn.',
       );
     } finally {
       setDelegationsLoading(false);
@@ -214,7 +214,7 @@ function DelegationPage() {
         const response = await api.get('/delegations/meta');
         setMeta(response.data);
       } catch (requestError) {
-        setError(requestError.response?.data?.message || 'Không tải được dữ liệu ủy quyền.');
+        setError(requestError.response?.data?.message || 'Không tải được dữ liệu trao quyền.');
       } finally {
         setMetaLoading(false);
       }
@@ -252,7 +252,7 @@ function DelegationPage() {
         }
       } catch (requestError) {
         message.error(
-          requestError.response?.data?.message || 'Không tải được danh sách user có thể nhận ủy quyền.',
+          requestError.response?.data?.message || 'Không tải được danh sách người có thể nhận quyền.',
         );
       } finally {
         setUsersLoading(false);
@@ -313,7 +313,7 @@ function DelegationPage() {
 
   const handleDelegate = async (permissionId) => {
     if (!selectedTargetUserId) {
-      message.warning('Hãy chọn một user trước khi ủy quyền.');
+      message.warning('Hãy chọn một người trước khi trao quyền.');
       return;
     }
 
@@ -328,9 +328,9 @@ function DelegationPage() {
       await loadDelegations(selectedTargetUserId, delegationStatusFilter);
       setDelegationNote('');
       setExpiresAt(null);
-      message.success('Ủy quyền thành công.');
+      message.success('Trao quyền thành công.');
     } catch (requestError) {
-      message.error(requestError.response?.data?.message || 'Không thể ủy quyền quyền này.');
+      message.error(requestError.response?.data?.message || 'Không thể trao quyền này.');
     } finally {
       setSaving(false);
     }
@@ -343,9 +343,9 @@ function DelegationPage() {
         data: { revoke_reason: 'Thu hồi từ giao diện quản trị' },
       });
       await loadDelegations(selectedTargetUserId, delegationStatusFilter);
-      message.success('Thu hồi ủy quyền thành công.');
+      message.success('Thu hồi quyền tạm thời thành công.');
     } catch (requestError) {
-      message.error(requestError.response?.data?.message || 'Không thể thu hồi ủy quyền này.');
+      message.error(requestError.response?.data?.message || 'Không thể thu hồi quyền này.');
     } finally {
       setSaving(false);
     }
@@ -376,11 +376,11 @@ function DelegationPage() {
     <Space orientation="vertical" size={20} style={{ width: '100%' }}>
       <Card className="page-card" styles={{ body: { padding: 28 } }}>
         <Typography.Title level={2} className="page-title">
-          Ủy quyền quyền hạn theo từng user
+          Trao quyền tạm thời cho từng nhân sự
         </Typography.Title>
         <Typography.Paragraph className="page-subtitle">
-          Vai trò cấp trên chỉ cấp quyền cho đúng user cần dùng, không cấp tràn cho cả role.
-          Mỗi lần ủy quyền đều được lưu lại ai cấp, cấp quyền gì, cho user nào, có hạn dùng hay không
+          Người quản lý chỉ trao thêm quyền cho đúng tài khoản cần hỗ trợ, không cấp tràn cho cả vai trò.
+          Mỗi lần trao quyền đều được lưu lại ai cấp, cấp quyền gì, cho ai, có hạn dùng hay không
           và đã bị thu hồi hay hết hạn ra sao.
         </Typography.Paragraph>
       </Card>
@@ -389,7 +389,7 @@ function DelegationPage() {
         <Alert
           type="error"
           showIcon
-          message="Không tải được dữ liệu ủy quyền"
+          message="Không tải được dữ liệu trao quyền"
           description={error}
         />
       ) : null}
@@ -397,7 +397,7 @@ function DelegationPage() {
       <Row gutter={[16, 16]}>
         <Col xs={24} md={8}>
           <Card className="page-card" styles={{ body: { padding: 24 } }}>
-            <Typography.Text type="secondary">Người đang ủy quyền</Typography.Text>
+            <Typography.Text type="secondary">Người đang trao quyền</Typography.Text>
             <div className="metric-value">{meta.grantor?.full_name || '-'}</div>
           </Card>
         </Col>
@@ -409,7 +409,7 @@ function DelegationPage() {
         </Col>
         <Col xs={24} md={8}>
           <Card className="page-card" styles={{ body: { padding: 24 } }}>
-            <Typography.Text type="secondary">Số quyền có thể ủy quyền</Typography.Text>
+            <Typography.Text type="secondary">Số quyền có thể trao</Typography.Text>
             <div className="metric-value">{meta.grantable_permissions.length}</div>
           </Card>
         </Col>
@@ -419,17 +419,17 @@ function DelegationPage() {
         <div className="section-toolbar" style={{ marginBottom: 20, alignItems: 'flex-start' }}>
           <div>
             <Typography.Title level={4} style={{ marginTop: 0, marginBottom: 6 }}>
-              Chọn user nhận ủy quyền
+              Chọn nhân sự nhận quyền
             </Typography.Title>
             <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-              Dùng bộ lọc và tìm kiếm để tìm đúng user trong danh sách lớn, sau đó chọn một dòng để
-              cấp quyền riêng cho tài khoản đó.
+              Dùng bộ lọc và tìm kiếm để tìm đúng người trong danh sách lớn, sau đó chọn một dòng để
+              trao quyền riêng cho tài khoản đó.
             </Typography.Paragraph>
           </div>
           <Input.Search
             allowClear
             enterButton="Tìm kiếm"
-            placeholder="Tìm theo username, họ tên hoặc email"
+            placeholder="Tìm theo tên đăng nhập, họ tên hoặc email"
             style={{ maxWidth: 320 }}
             value={userSearch}
             onChange={(event) => {
@@ -462,7 +462,7 @@ function DelegationPage() {
             rowKey="id"
             loading={metaLoading || usersLoading}
             dataSource={usersResult.items}
-            locale={{ emptyText: 'Không có user nào phù hợp với bộ lọc hiện tại.' }}
+            locale={{ emptyText: 'Không có người nào phù hợp với bộ lọc hiện tại.' }}
             rowSelection={{
               type: 'radio',
               selectedRowKeys: selectedTargetUserId ? [selectedTargetUserId] : [],
@@ -485,7 +485,7 @@ function DelegationPage() {
               },
             }}
             columns={[
-              { title: 'Username', dataIndex: 'username', key: 'username' },
+              { title: 'Tên đăng nhập', dataIndex: 'username', key: 'username' },
               { title: 'Họ tên', dataIndex: 'full_name', key: 'full_name', render: (value) => value || '-' },
               { title: 'Email', dataIndex: 'email', key: 'email', render: (value) => value || '-' },
               { title: 'Vai trò', dataIndex: 'role_name', key: 'role_name', render: (value) => <Tag color="cyan">{getRoleLabel(value)}</Tag> },
@@ -509,18 +509,18 @@ function DelegationPage() {
           <Space orientation="vertical" size={18} style={{ width: '100%' }}>
             <div>
               <Typography.Title level={4} style={{ marginTop: 0, marginBottom: 6 }}>
-                Bảng kéo thả ủy quyền cho user đã chọn
+                Bảng kéo thả quyền cho nhân sự đã chọn
               </Typography.Title>
               <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
                 Bạn đang thao tác cho <strong>{selectedTargetUser.full_name}</strong> ({selectedTargetUser.username}).
-                Kéo quyền từ cột trái sang cột phải để cấp riêng cho user này, hoặc kéo ngược lại để thu hồi.
+                Kéo quyền từ cột trái sang cột phải để trao riêng cho người này, hoặc kéo ngược lại để thu hồi.
               </Typography.Paragraph>
             </div>
 
             <Row gutter={[16, 16]}>
               <Col xs={24} md={8}>
                 <Card className="glass-panel" styles={{ body: { padding: 20 } }}>
-                  <Typography.Text type="secondary">User đang chọn</Typography.Text>
+                  <Typography.Text type="secondary">Nhân sự đang chọn</Typography.Text>
                   <div className="metric-value" style={{ fontSize: '1.6rem' }}>
                     {selectedTargetUser.full_name}
                   </div>
@@ -552,7 +552,7 @@ function DelegationPage() {
               <Col xs={24} lg={12}>
                 <Input
                   allowClear
-                  placeholder="Ghi chú khi cấp quyền (tuỳ chọn)"
+                  placeholder="Ghi chú khi trao quyền (tuỳ chọn)"
                   value={delegationNote}
                   onChange={(event) => setDelegationNote(event.target.value)}
                 />
@@ -562,7 +562,7 @@ function DelegationPage() {
                   showTime
                   allowClear
                   style={{ width: '100%' }}
-                  placeholder="Chọn hạn dùng ủy quyền (tuỳ chọn)"
+                  placeholder="Chọn hạn dùng quyền tạm thời (tuỳ chọn)"
                   value={expiresAt}
                   onChange={setExpiresAt}
                 />
@@ -579,7 +579,7 @@ function DelegationPage() {
                   Quyền bạn đang có
                 </Typography.Title>
                 <Typography.Text type="secondary">
-                  Những quyền bạn có thể cấp riêng cho user này.
+                  Những quyền bạn có thể trao riêng cho người này.
                 </Typography.Text>
                 <div className="permission-list">
                   {availablePermissions.length ? availablePermissions.map((item) => (
@@ -598,7 +598,7 @@ function DelegationPage() {
                   )) : (
                     <Empty
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
-                      description="Không còn quyền nào để ủy quyền thêm cho user này."
+                      description="Không còn quyền nào để trao thêm cho người này."
                     />
                   )}
                 </div>
@@ -613,7 +613,7 @@ function DelegationPage() {
                   Quyền bạn đã cấp riêng
                 </Typography.Title>
                 <Typography.Text type="secondary">
-                  Đây là các quyền do chính bạn cấp riêng cho user đang chọn và vẫn còn hiệu lực.
+                  Đây là các quyền do chính bạn trao riêng cho người đang chọn và vẫn còn hiệu lực.
                 </Typography.Text>
                 <div className="permission-list">
                   {ownDelegations.length ? ownDelegations.map((item) => (
@@ -628,7 +628,7 @@ function DelegationPage() {
                   )) : (
                     <Empty
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
-                      description="Bạn chưa cấp quyền riêng nào còn hiệu lực cho user này."
+                      description="Bạn chưa trao quyền riêng nào còn hiệu lực cho người này."
                     />
                   )}
                 </div>
@@ -636,7 +636,7 @@ function DelegationPage() {
             </div>
           </Space>
         ) : (
-          <Empty description="Hãy chọn một user ở bảng bên trên để bắt đầu ủy quyền." />
+          <Empty description="Hãy chọn một người ở bảng bên trên để bắt đầu trao quyền." />
         )}
       </Card>
 
@@ -644,7 +644,7 @@ function DelegationPage() {
         <div className="section-toolbar" style={{ marginBottom: 20 }}>
           <div>
             <Typography.Title level={4} style={{ marginTop: 0, marginBottom: 6 }}>
-              Lịch sử ủy quyền của user đã chọn
+              Lịch sử trao quyền của nhân sự đã chọn
             </Typography.Title>
             <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
               Dùng để truy vết ai đã cấp quyền nào, lúc nào, có hạn dùng hay đã bị thu hồi/hết hạn chưa.
@@ -667,7 +667,7 @@ function DelegationPage() {
           loading={delegationsLoading || saving}
           pagination={false}
           dataSource={selectedUserDelegations}
-          locale={{ emptyText: 'Chưa có bản ghi ủy quyền nào cho user này.' }}
+          locale={{ emptyText: 'Chưa có bản ghi trao quyền nào cho người này.' }}
           columns={[
             {
               title: 'Quyền',

@@ -20,7 +20,7 @@ import {
   Typography,
   message,
 } from 'antd';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useEffectEvent, useMemo, useState } from 'react';
 
 import api from '../api/client';
 import { useAuth } from '../auth/useAuth';
@@ -51,7 +51,7 @@ const ROLE_OPTIONS = [
 ];
 
 function NotificationsPage() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, socket } = useAuth();
   const canManageTasks = hasPermission('tasks.manage');
   const canBroadcast = hasPermission('notifications.manage');
 
@@ -104,6 +104,25 @@ function NotificationsPage() {
   useEffect(() => {
     fetchModule9Data();
   }, [fetchModule9Data]);
+
+  const handleRealtimeNotification = useEffectEvent((notification) => {
+    setNotifications((current) => {
+      if (current.some((item) => item.id === notification.id)) {
+        return current;
+      }
+      return [notification, ...current].slice(0, 20);
+    });
+    message.info(notification.title || 'Bạn có thông báo mới.');
+  });
+
+  useEffect(() => {
+    if (!socket) {
+      return undefined;
+    }
+    const onNotification = (payload) => handleRealtimeNotification(payload);
+    socket.on('notifications:new', onNotification);
+    return () => socket.off('notifications:new', onNotification);
+  }, [socket]);
 
   const handleCreateTask = async () => {
     try {

@@ -5,7 +5,7 @@ from flask_jwt_extended import jwt_required
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from ..extensions import db
+from ..extensions import db, socketio
 from ..models import Conversation, ConversationParticipant, Message, User
 from ..permissions import get_current_user, permission_required
 from ..schemas import ChatDirectConversationSchema, ChatMessageSchema
@@ -14,6 +14,7 @@ from ..serializers import (
     serialize_chat_message,
     serialize_user_summary,
 )
+from ..socket_events import user_room
 from ..utils import utc_now
 
 chat_bp = Blueprint("chat", __name__)
@@ -150,4 +151,8 @@ def create_message(conversation_id):
     conversation.updated_at = utc_now()
     db.session.add(message)
     db.session.commit()
-    return jsonify({"item": serialize_chat_message(message)}), 201
+    serialized_message = serialize_chat_message(message)
+    for participant in conversation.participants:
+        if participant.user_id != current_user.id:
+            socketio.emit("chat:receive", serialized_message, to=user_room(participant.user_id))
+    return jsonify({"item": serialized_message}), 201

@@ -15,9 +15,9 @@ const actionOptions = [
   { label: 'Tạo nhân sự', value: 'employees.created' },
   { label: 'Cập nhật nhân sự', value: 'employees.updated' },
   { label: 'Xóa nhân sự', value: 'employees.deleted' },
-  { label: 'Cấp ủy quyền', value: 'delegations.created' },
-  { label: 'Kích hoạt lại ủy quyền', value: 'delegations.reactivated' },
-  { label: 'Thu hồi ủy quyền', value: 'delegations.revoked' },
+  { label: 'Trao quyền tạm thời', value: 'delegations.created' },
+  { label: 'Kích hoạt lại quyền tạm thời', value: 'delegations.reactivated' },
+  { label: 'Thu hồi quyền tạm thời', value: 'delegations.revoked' },
 ];
 
 const entityTypeOptions = [
@@ -91,7 +91,7 @@ function AuditLogsPage() {
           Audit log
         </Typography.Title>
         <Typography.Paragraph className="page-subtitle">
-          Nhật ký thao tác dùng để truy vết thay đổi trên xác thực, người dùng, nhân sự và ủy quyền.
+          Nhật ký thao tác dùng để truy vết thay đổi trên xác thực, người dùng, nhân sự và quyền tạm thời.
         </Typography.Paragraph>
       </Card>
 

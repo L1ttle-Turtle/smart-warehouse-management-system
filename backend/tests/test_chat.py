@@ -17,22 +17,22 @@ def test_chat_users_excludes_current_user(client, auth_headers):
 
 
 def test_create_direct_conversation_and_send_message(client, auth_headers, app):
-    accountant_id = get_user_id(app, "accountant")
+    admin_id = get_user_id(app, "admin")
 
     create_response = client.post(
         "/chat/conversations/direct",
         headers=auth_headers("manager", "Manager@123"),
-        json={"user_id": accountant_id},
+        json={"user_id": admin_id},
     )
 
     assert create_response.status_code == 201
     conversation = create_response.get_json()["item"]
-    assert conversation["peer"]["username"] == "accountant"
+    assert conversation["peer"]["username"] == "admin"
 
     duplicate_response = client.post(
         "/chat/conversations/direct",
         headers=auth_headers("manager", "Manager@123"),
-        json={"user_id": accountant_id},
+        json={"user_id": admin_id},
     )
     assert duplicate_response.status_code == 200
     assert duplicate_response.get_json()["item"]["id"] == conversation["id"]

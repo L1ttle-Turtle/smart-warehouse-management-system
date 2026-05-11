@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { io } from 'socket.io-client';
 
 import api, { setAuthToken } from '../api/client';
 import { AuthContext } from './auth-context';
@@ -8,6 +9,8 @@ const STORAGE_KEY = 'warehouse-auth';
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
+  const [socket, setSocket] = useState(null);
+  const [socketConnected, setSocketConnected] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -66,6 +69,33 @@ export function AuthProvider({ children }) {
     }
   }, [token]);
 
+  useEffect(() => {
+    if (!token || !user) {
+      setSocketConnected(false);
+      setSocket((currentSocket) => {
+        if (currentSocket) {
+          currentSocket.disconnect();
+        }
+        return null;
+      });
+      return undefined;
+    }
+
+    const nextSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
+      auth: { token },
+      // Flask dev server in this project is most stable with HTTP long-polling.
+      transports: ['polling'],
+    });
+
+    nextSocket.on('connect', () => setSocketConnected(true));
+    nextSocket.on('disconnect', () => setSocketConnected(false));
+    setSocket(nextSocket);
+
+    return () => {
+      nextSocket.disconnect();
+    };
+  }, [token, user]);
+
   const updateProfile = useCallback(async (payload) => {
     const response = await api.patch('/auth/profile', payload);
     setUser(response.data.user);
@@ -87,8 +117,10 @@ export function AuthProvider({ children }) {
       logout,
       updateProfile,
       hasPermission,
+      socket,
+      socketConnected,
     }),
-    [token, user, loading, login, logout, updateProfile, hasPermission],
+    [token, user, loading, login, logout, updateProfile, hasPermission, socket, socketConnected],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

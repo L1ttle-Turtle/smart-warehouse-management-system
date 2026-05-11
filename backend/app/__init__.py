@@ -51,6 +51,7 @@ def create_app(config_object=None):
     )
 
     register_blueprints(app)
+    from . import socket_events  # noqa: F401
 
     @app.get("/health")
     def health():

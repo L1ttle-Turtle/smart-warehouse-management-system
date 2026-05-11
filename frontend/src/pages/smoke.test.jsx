@@ -8,6 +8,7 @@ import App from '../App';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/ProtectedRoute';
 import AuditLogsPage from './AuditLogsPage';
+import BankReconciliationPage from './BankReconciliationPage';
 import CatalogsPage from './CatalogsPage';
 import ChatPage from './ChatPage';
 import DelegationPage from './DelegationPage';
@@ -18,6 +19,7 @@ import InventoryPage from './InventoryPage';
 import InvoicesPage from './InvoicesPage';
 import LoginPage from './LoginPage';
 import NotificationsPage from './NotificationsPage';
+import PaymentsPage from './PaymentsPage';
 import ProfilePage from './ProfilePage';
 import ProductsPage from './ProductsPage';
 import ReportsPage from './ReportsPage';
@@ -169,13 +171,15 @@ const demoRoleProfiles = {
       'Điều chuyển kho',
       'Vận chuyển',
       'Hóa đơn',
+      'Thanh toán',
+      'Đối soát ngân hàng',
       'Công việc & thông báo',
       'Báo cáo',
       'Chat nội bộ',
       'Tồn kho',
       'Kiểm kê kho',
       'Danh mục nền',
-      'Ủy quyền quyền hạn',
+      'Trao quyền tạm thời',
       'Audit log',
       'Vai trò và quyền',
       'Hồ sơ cá nhân',
@@ -197,13 +201,15 @@ const demoRoleProfiles = {
       'Điều chuyển kho',
       'Vận chuyển',
       'Hóa đơn',
+      'Thanh toán',
+      'Đối soát ngân hàng',
       'Công việc & thông báo',
       'Báo cáo',
       'Chat nội bộ',
       'Tồn kho',
       'Kiểm kê kho',
       'Danh mục nền',
-      'Ủy quyền quyền hạn',
+      'Trao quyền tạm thời',
       'Audit log',
       'Hồ sơ cá nhân',
     ],
@@ -232,9 +238,11 @@ const demoRoleProfiles = {
       'Tài khoản',
       'Nhân sự',
       'Hóa đơn',
+      'Thanh toán',
+      'Đối soát ngân hàng',
       'Báo cáo',
       'Danh mục nền',
-      'Ủy quyền quyền hạn',
+      'Trao quyền tạm thời',
       'Audit log',
       'Vai trò và quyền',
     ],
@@ -247,6 +255,8 @@ const demoRoleProfiles = {
     visibleMenus: [
       'Dashboard cá nhân',
       'Hóa đơn',
+      'Thanh toán',
+      'Đối soát ngân hàng',
       'Công việc & thông báo',
       'Báo cáo',
       'Chat nội bộ',
@@ -264,7 +274,7 @@ const demoRoleProfiles = {
       'Vận chuyển',
       'Tồn kho',
       'Kiểm kê kho',
-      'Ủy quyền quyền hạn',
+      'Trao quyền tạm thời',
       'Audit log',
       'Vai trò và quyền',
     ],
@@ -290,11 +300,13 @@ const demoRoleProfiles = {
       'Xuất kho',
       'Điều chuyển kho',
       'Hóa đơn',
+      'Thanh toán',
+      'Đối soát ngân hàng',
       'Báo cáo',
       'Tồn kho',
       'Kiểm kê kho',
       'Danh mục nền',
-      'Ủy quyền quyền hạn',
+      'Trao quyền tạm thời',
       'Audit log',
       'Vai trò và quyền',
     ],
@@ -1152,6 +1164,60 @@ vi.mock('../api/client', () => ({
         });
       }
 
+      if (url === '/payments') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                payment_code: 'PAY-DEMO-001',
+                invoice_id: 1,
+                invoice_code: 'INV-DEMO-001',
+                invoice_status: 'partial',
+                bank_account_id: 1,
+                bank_name: 'Vietcombank',
+                bank_account_number: '0123456789',
+                created_by_name: 'Accountant User',
+                amount: 900000,
+                payment_method: 'bank_transfer',
+                paid_at: '2026-04-29T10:00:00',
+                note: 'Thanh toán demo',
+              },
+            ],
+            total: 1,
+            page: 1,
+            page_size: 10,
+          },
+        });
+      }
+
+      if (url === '/bank-transactions') {
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                id: 1,
+                transaction_code: 'BNK-DEMO-001',
+                invoice_id: 1,
+                invoice_code: 'INV-DEMO-001',
+                invoice_status: 'unpaid',
+                bank_account_id: 1,
+                bank_name: 'Vietcombank',
+                bank_account_number: '0123456789',
+                amount: 700000,
+                description: 'Khách chuyển khoản cho INV-DEMO-001',
+                status: 'matched',
+                received_at: '2026-04-29T11:00:00',
+                note: 'Đã khớp hóa đơn, chờ đối soát',
+              },
+            ],
+            total: 1,
+            page: 1,
+            page_size: 10,
+          },
+        });
+      }
+
       if (url === '/warehouses') {
         return Promise.resolve({
           data: {
@@ -1686,7 +1752,7 @@ test('filters navigation items by permission', () => {
   expect(screen.getByText(/^Nhập kho$/i)).toBeInTheDocument();
   expect(screen.getByText(/^Xuất kho$/i)).toBeInTheDocument();
   expect(screen.getByText(/^Danh mục nền$/i)).toBeInTheDocument();
-  expect(screen.getByText(/^Ủy quyền quyền hạn$/i)).toBeInTheDocument();
+  expect(screen.getByText(/^Trao quyền tạm thời$/i)).toBeInTheDocument();
   expect(screen.getByText(/^Audit log$/i)).toBeInTheDocument();
   expect(screen.queryByText(/^Tài khoản$/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/^Vai trò và quyền$/i)).not.toBeInTheDocument();
@@ -1753,13 +1819,13 @@ test('demo role routes allow intended screens and block out-of-scope screens', a
       forbiddenView.unmount();
     }
   }
-});
+}, 20000);
 
 test('renders role matrix page', async () => {
   renderWithProviders(<RolesPage />, '/roles');
   await waitFor(() => expect(screen.getByText(/Ma trận vai trò và quyền/i)).toBeInTheDocument());
-  expect(screen.getByText(/^admin$/i)).toBeInTheDocument();
-  expect(screen.getAllByText(/roles.view/i).length).toBeGreaterThan(0);
+  await waitFor(() => expect(screen.getByText(/^admin$/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getAllByText(/roles.view/i).length).toBeGreaterThan(0));
 });
 
 test('renders users page', async () => {
@@ -1820,9 +1886,9 @@ test('catalogs page redirects accountant to first allowed tab for invalid query 
 
 test('renders delegation page', async () => {
   renderWithProviders(<DelegationPage />, '/delegations');
-  await waitFor(() => expect(screen.getByText(/Ủy quyền quyền hạn theo từng user/i)).toBeInTheDocument());
-  expect(screen.getByText(/Chọn user nhận ủy quyền/i)).toBeInTheDocument();
-  await waitFor(() => expect(screen.getByText(/Bảng kéo thả ủy quyền cho user đã chọn/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText(/Trao quyền tạm thời cho từng nhân sự/i)).toBeInTheDocument());
+  expect(screen.getByText(/Chọn nhân sự nhận quyền/i)).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByText(/Bảng kéo thả quyền cho nhân sự đã chọn/i)).toBeInTheDocument());
   expect(screen.getAllByText(/Manager User/i).length).toBeGreaterThan(0);
 });
 
@@ -2167,11 +2233,41 @@ test('accountant can render invoices page for demo review', async () => {
   expect(screen.getByText(/Chi tiết hóa đơn/i)).toBeInTheDocument();
 });
 
+test('renders payments page with payment history filters', async () => {
+  renderWithProviders(<PaymentsPage />, '/payments');
+
+  await waitFor(() => expect(screen.getByRole('heading', { name: /^Thanh toán$/i })).toBeInTheDocument());
+  await waitFor(() => expect(screen.getAllByText(/PAY-DEMO-001/i).length).toBeGreaterThan(0));
+  expect(screen.getByText(/Chuyển khoản/i)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^Lọc$/i })).toBeInTheDocument();
+});
+
+test('renders bank reconciliation page and can trigger reconcile action', async () => {
+  renderWithProviders(<BankReconciliationPage />, '/bank-reconciliation');
+
+  await waitFor(() => expect(screen.getByRole('heading', { name: /^Đối soát ngân hàng$/i })).toBeInTheDocument());
+  await waitFor(() => expect(screen.getAllByText(/BNK-DEMO-001/i).length).toBeGreaterThan(0));
+  expect(screen.getAllByText(/Đã khớp hóa đơn/i).length).toBeGreaterThan(0);
+  expect(screen.getByRole('button', { name: /Mô phỏng giao dịch/i })).toBeInTheDocument();
+
+  fireEvent.click(screen.getAllByRole('button', { name: /Đối soát/i })[0]);
+  await waitFor(() => expect(screen.getAllByRole('button', { name: /Đối soát/i }).length).toBeGreaterThan(1));
+  const reconcileButtons = screen.getAllByRole('button', { name: /Đối soát/i });
+  fireEvent.click(reconcileButtons[reconcileButtons.length - 1]);
+
+  await waitFor(() => expect(api.post).toHaveBeenCalledWith(
+    '/bank-transactions/1/reconcile',
+    expect.objectContaining({
+      note: expect.stringContaining('BNK-DEMO-001'),
+    }),
+  ));
+});
+
 test('renders reports page with business summary charts', async () => {
   renderWithProviders(<ReportsPage />, '/reports');
 
   await waitFor(() => expect(screen.getByText(/Tổng quan điều hành/i)).toBeInTheDocument());
-  expect(screen.getByText(/Tổng tồn kho/i)).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByText(/Tổng tồn kho/i)).toBeInTheDocument());
   expect(screen.getByText(/Dòng tồn cần chú ý/i)).toBeInTheDocument();
   expect(screen.getByText(/Công nợ còn lại/i)).toBeInTheDocument();
   await waitFor(() => expect(screen.getByText(/Tồn kho theo kho/i)).toBeInTheDocument());

@@ -20,7 +20,7 @@ function LoginPage() {
             Đăng nhập một lần, vào đúng màn hình, thấy đúng quyền.
           </Typography.Title>
           <Typography.Paragraph style={{ color: 'rgba(255, 245, 229, 0.8)', fontSize: 16 }}>
-            Hệ thống hiện đã có xác thực JWT, phân quyền theo vai trò, ủy quyền theo từng user,
+            Hệ thống hiện đã có xác thực JWT, phân quyền theo vai trò, trao quyền tạm thời theo từng user,
             đổi mật khẩu theo policy và dashboard riêng cho từng nhóm người dùng.
           </Typography.Paragraph>
         </div>

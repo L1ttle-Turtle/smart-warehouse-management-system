@@ -7,6 +7,7 @@ import AppShell from './components/AppShell';
 import { useAuth } from './auth/useAuth';
 
 const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage'));
+const BankReconciliationPage = lazy(() => import('./pages/BankReconciliationPage'));
 const CatalogsPage = lazy(() => import('./pages/CatalogsPage'));
 const ChatPage = lazy(() => import('./pages/ChatPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -19,6 +20,7 @@ const InventoryPage = lazy(() => import('./pages/InventoryPage'));
 const InvoicesPage = lazy(() => import('./pages/InvoicesPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const PaymentsPage = lazy(() => import('./pages/PaymentsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const ProductsPage = lazy(() => import('./pages/ProductsPage'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage'));
@@ -164,6 +166,22 @@ function App() {
             element={(
               <ProtectedRoute requiredPermission="invoices.view">
                 <InvoicesPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="payments"
+            element={(
+              <ProtectedRoute requiredPermission="invoices.view">
+                <PaymentsPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="bank-reconciliation"
+            element={(
+              <ProtectedRoute requiredPermission="invoices.view">
+                <BankReconciliationPage />
               </ProtectedRoute>
             )}
           />

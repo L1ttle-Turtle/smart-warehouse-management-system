@@ -523,6 +523,28 @@ class Payment(db.Model, SerializerMixin, TimestampMixin):
     creator = db.relationship("User", foreign_keys=[created_by])
 
 
+class BankTransactionLog(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "bank_transaction_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    transaction_code = db.Column(db.String(30), unique=True, nullable=False)
+    invoice_id = db.Column(db.Integer, db.ForeignKey("invoices.id"))
+    bank_account_id = db.Column(db.Integer, db.ForeignKey("bank_accounts.id"))
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    reconciled_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    amount = db.Column(db.Float, nullable=False)
+    description = db.Column(db.String(255), nullable=False)
+    status = db.Column(db.String(20), default="pending", nullable=False)
+    received_at = db.Column(db.DateTime, nullable=False)
+    reconciled_at = db.Column(db.DateTime)
+    note = db.Column(db.String(255))
+
+    invoice = db.relationship("Invoice", foreign_keys=[invoice_id])
+    bank_account = db.relationship("BankAccount", foreign_keys=[bank_account_id])
+    creator = db.relationship("User", foreign_keys=[created_by])
+    reconciler = db.relationship("User", foreign_keys=[reconciled_by])
+
+
 class Notification(db.Model, SerializerMixin, TimestampMixin):
     __tablename__ = "notifications"
 

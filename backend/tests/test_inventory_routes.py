@@ -86,7 +86,8 @@ def test_inventory_list_can_filter_out_of_stock(client, auth_headers):
     payload = response.get_json()
     assert payload["items"]
     assert all(item["stock_status"] == "out_of_stock" for item in payload["items"])
-    assert all(item["product_code"] == "PRD004" for item in payload["items"])
+    assert any(item["product_code"] == "PRD004" for item in payload["items"])
+    assert any(item["product_code"] in {"PRD016", "PRD020"} for item in payload["items"])
 
 
 def test_inventory_list_rejects_invalid_filter_ids(client, auth_headers):
