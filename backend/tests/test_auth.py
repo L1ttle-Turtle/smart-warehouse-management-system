@@ -1,7 +1,7 @@
 import pytest
 
 from app.extensions import db
-from app.models import Permission, User, UserPermissionDelegation
+from app.models import Permission, TokenBlocklist, User, UserPermissionDelegation
 
 
 @pytest.mark.parametrize(
@@ -50,6 +50,53 @@ def test_me_requires_token(client):
     response = client.get("/auth/me")
 
     assert response.status_code == 401
+
+
+def test_logout_revokes_current_access_token(client, app):
+    login_response = client.post(
+        "/auth/login",
+        json={"username": "admin", "password": "Admin@123"},
+    )
+    token = login_response.get_json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    assert client.get("/auth/me", headers=headers).status_code == 200
+
+    logout_response = client.post("/auth/logout", headers=headers)
+
+    assert logout_response.status_code == 200
+    assert logout_response.get_json()["message"] == "Đăng xuất thành công."
+
+    revoked_response = client.get("/auth/me", headers=headers)
+    assert revoked_response.status_code == 401
+    assert revoked_response.get_json()["message"] == "Phiên đăng nhập đã hết hiệu lực. Vui lòng đăng nhập lại."
+
+    with app.app_context():
+        revoked_token = TokenBlocklist.query.one()
+        assert revoked_token.user.username == "admin"
+        assert revoked_token.token_type == "access"
+        assert revoked_token.expires_at is not None
+
+
+def test_logout_does_not_block_new_login_session(client):
+    first_login = client.post(
+        "/auth/login",
+        json={"username": "staff", "password": "Staff@123"},
+    )
+    first_token = first_login.get_json()["access_token"]
+    first_headers = {"Authorization": f"Bearer {first_token}"}
+    assert client.post("/auth/logout", headers=first_headers).status_code == 200
+
+    second_login = client.post(
+        "/auth/login",
+        json={"username": "staff", "password": "Staff@123"},
+    )
+    second_token = second_login.get_json()["access_token"]
+    second_headers = {"Authorization": f"Bearer {second_token}"}
+
+    assert second_login.status_code == 200
+    assert second_token != first_token
+    assert client.get("/auth/me", headers=second_headers).status_code == 200
 
 
 def test_profile_updates_contact_information(client, auth_headers, app):

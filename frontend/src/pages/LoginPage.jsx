@@ -68,14 +68,14 @@ function LoginPage() {
               label="Tên đăng nhập"
               rules={[{ required: true, message: 'Nhập tên đăng nhập' }]}
             >
-              <Input prefix={<UserOutlined />} size="large" />
+              <Input prefix={<UserOutlined />} size="large" autoComplete="username" />
             </Form.Item>
             <Form.Item
               name="password"
               label="Mật khẩu"
               rules={[{ required: true, message: 'Nhập mật khẩu' }]}
             >
-              <Input.Password prefix={<LockOutlined />} size="large" />
+              <Input.Password prefix={<LockOutlined />} size="large" autoComplete="current-password" />
             </Form.Item>
             <Button type="primary" htmlType="submit" size="large" block loading={loading}>
               Đăng nhập

@@ -740,17 +740,27 @@ vi.mock('../api/client', () => ({
                 warehouse_name: 'Kho Trung Tam',
                 created_by: 2,
                 created_by_name: 'Manager User',
+                submitted_by: null,
+                submitted_by_name: null,
                 confirmed_by: null,
                 confirmed_by_name: null,
                 cancelled_by: null,
                 cancelled_by_name: null,
+                rejected_by: null,
+                rejected_by_name: null,
                 status: 'draft',
+                current_approval_level: 0,
+                required_approval_levels: 2,
+                approved_levels: 0,
+                approval_progress_label: '0/2',
                 note: 'Phiáº¿u kiá»ƒm kÃª demo tá»‘i thiá»ƒu',
                 detail_count: 2,
                 total_actual_quantity: 23,
                 total_difference_quantity: -1,
+                submitted_at: null,
                 confirmed_at: null,
                 cancelled_at: null,
+                rejected_at: null,
                 created_at: '2026-04-24T08:30:00',
                 updated_at: '2026-04-24T08:45:00',
                 details: [
@@ -781,6 +791,7 @@ vi.mock('../api/client', () => ({
                     note: '',
                   },
                 ],
+                approvals: [],
               },
             ],
             total: 1,
@@ -2140,7 +2151,8 @@ test('renders stocktakes page with draft stocktake and opens stocktake form', as
   await waitFor(() => expect(screen.getByText(/Kiểm kê kho/i)).toBeInTheDocument());
   await waitFor(() => expect(screen.getAllByText(/STK-DEMO-001/i).length).toBeGreaterThan(0));
   expect(screen.getByText(/Lịch sử biến động/i)).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /Xác nhận/i })).toBeInTheDocument();
+  expect(screen.getByText(/Lịch sử phê duyệt/i)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Gửi duyệt/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Hủy phiếu/i })).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: /Thêm phiếu kiểm kê/i }));

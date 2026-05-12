@@ -1,9 +1,11 @@
+from datetime import UTC, datetime
+
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import create_access_token, jwt_required
+from flask_jwt_extended import create_access_token, get_jwt, jwt_required
 
 from ..audit import log_audit_event
 from ..extensions import db
-from ..models import User
+from ..models import TokenBlocklist, User
 from ..permissions import get_current_user
 from ..schemas import LoginSchema, ProfileUpdateSchema
 from ..serializers import serialize_user
@@ -119,6 +121,19 @@ def update_profile():
 @jwt_required()
 def logout():
     current_user = get_current_user()
+    token_payload = get_jwt()
+    expires_at = datetime.fromtimestamp(token_payload["exp"], UTC).replace(tzinfo=None)
+
+    if not TokenBlocklist.query.filter_by(jti=token_payload["jti"]).first():
+        db.session.add(
+            TokenBlocklist(
+                jti=token_payload["jti"],
+                token_type=token_payload.get("type", "access"),
+                user_id=current_user.id,
+                expires_at=expires_at,
+            ),
+        )
+
     log_audit_event(
         "auth.logout",
         "user",

@@ -3,6 +3,9 @@
 ## Cập nhật mới nhất
 
 - Đã bổ sung batch hoàn thiện demo lớn: timeline shipment, trang `/payments`, realtime nhẹ cho notification/chat và bank reconciliation stub cho Module 12.
+- Đã bổ sung hardening bảo mật sau demo walkthrough: `/auth/logout` hiện ghi token vào blocklist, token cũ không thể gọi API sau khi đăng xuất.
+- Đã chuyển lưu JWT phía frontend từ `localStorage` sang `sessionStorage` + in-memory để giảm rủi ro token bị lưu bền lâu trên trình duyệt.
+- Đã bổ sung cảnh báo tồn kho tự động: khi nghiệp vụ kho làm một dòng tồn rơi vào `Tồn thấp` hoặc `Hết hàng`, hệ thống tạo notification in-app cho Admin/Manager.
 - Đã thêm route `/bank-reconciliation` để mô phỏng giao dịch ngân hàng, khớp hóa đơn và ghi nhận payment thật khi bấm đối soát.
 - Đã đổi wording phần phân quyền từ “Ủy quyền quyền hạn” sang “Trao quyền tạm thời” để người dùng không phải dev dễ hiểu hơn.
 - Đã mở rộng seed demo mật độ cao cho toàn project: 4 kho, 13 vị trí, 20 sản phẩm, hơn 30 dòng tồn kho, hơn 40 movement và dữ liệu sẵn cho nhập/xuất/điều chuyển/kiểm kê/vận chuyển/hóa đơn/payment/task/chat.
@@ -219,6 +222,7 @@ Luồng dữ liệu chính:
 - Có thể lọc movement theo:
   - `reference_type`
   - `reference_id`
+- Khi nghiệp vụ nhập/xuất/điều chuyển/kiểm kê làm tồn kho rơi vào `Tồn thấp` hoặc `Hết hàng`, backend tự tạo notification loại `inventory` cho Admin/Manager.
 
 Đã có trên frontend:
 
@@ -319,14 +323,23 @@ Luồng dữ liệu chính:
 - `POST /stocktakes`
 - `GET /stocktakes/<id>`
 - `PUT /stocktakes/<id>`
+- `POST /stocktakes/<id>/submit-for-approval`
+- `POST /stocktakes/<id>/approve`
+- `POST /stocktakes/<id>/reject`
 - `POST /stocktakes/<id>/confirm`
 - `POST /stocktakes/<id>/cancel`
 
 Đã có trên backend:
 
-- Model `stocktakes` và `stocktake_details`
+- Model `stocktakes`, `stocktake_details` và `stocktake_approvals`
 - Tạo phiếu kiểm kê nhiều dòng ở trạng thái `draft`
 - Lưu nháp không làm thay đổi tồn kho
+- Gửi phiếu nháp vào quy trình duyệt nhiều cấp với trạng thái `pending_approval`
+- Duyệt tuần tự 2 cấp:
+  - cấp 1: `manager` hoặc `admin`
+  - cấp 2: `admin`
+- Khi đủ cấp duyệt, hệ thống tự xác nhận phiếu và cập nhật tồn kho thật
+- Từ chối phiếu đang chờ duyệt với trạng thái `rejected`, không làm thay đổi tồn kho
 - Xác nhận phiếu dùng transaction và chỉ cập nhật các dòng có chênh lệch thực tế
 - Movement sinh với:
   - `movement_type = stocktake_adjustment`
@@ -342,8 +355,10 @@ Luồng dữ liệu chính:
 - Tạo phiếu kiểm kê nhiều dòng
 - Sửa phiếu nháp
 - Hủy phiếu nháp
-- Xác nhận phiếu
+- Gửi duyệt phiếu nháp
+- Duyệt cấp hiện tại hoặc từ chối phiếu đang chờ duyệt
 - Xem chi tiết dòng kiểm kê
+- Xem lịch sử phê duyệt của phiếu kiểm kê
 - Xem lịch sử movement của chính phiếu kiểm kê đang chọn
 
 ### Module 7 - Vận chuyển tối thiểu
@@ -932,9 +947,10 @@ npm run build
 2. Lọc thêm theo kho hoặc nhóm hàng để cho thấy màn hình tồn kho đã usable hơn khi demo
 3. Vào `Kiểm kê kho`, mở phiếu demo hoặc tạo mới một phiếu kiểm kê nhiều dòng
 4. Lưu nháp để chứng minh phiếu chưa làm thay đổi tồn kho
-5. Xác nhận phiếu kiểm kê để cập nhật số lượng thực tế
-6. Quay lại `Tồn kho` để thấy số lượng và trạng thái tồn thay đổi
-7. Mở lại `Kiểm kê kho` để xem `Lịch sử biến động` của phiếu với `reference_type = stocktake`
+5. Bấm `Gửi duyệt` để đưa phiếu vào trạng thái `pending_approval`
+6. Đăng nhập/đổi sang `manager` để duyệt cấp 1, sau đó `admin` duyệt cấp 2
+7. Sau khi đủ cấp duyệt, quay lại `Tồn kho` để thấy số lượng và trạng thái tồn thay đổi
+8. Mở lại `Kiểm kê kho` để xem `Lịch sử phê duyệt` và `Lịch sử biến động` của phiếu với `reference_type = stocktake`
 
 ### Kịch bản 5 - Demo vận chuyển tối thiểu
 
@@ -1044,10 +1060,10 @@ Các phần sau vẫn nằm ngoài phạm vi hoàn thành hiện tại:
 
 ### Known issues kỹ thuật còn lại
 
-Các điểm dưới đây đã được automation review nhắc tới và **vẫn chưa xử lý xong hoàn toàn**:
+Trạng thái các điểm kỹ thuật đã được automation review nhắc tới:
 
-- JWT logout hiện mới dừng ở mức audit log, chưa có blocklist / token revocation thật.
-- Frontend vẫn lưu bearer token trong `localStorage`, chưa chuyển sang chiến lược an toàn hơn.
+- JWT logout đã có blocklist / token revocation thật cho access token hiện tại; phần nâng cao còn lại là cơ chế dọn token hết hạn định kỳ.
+- Frontend đã bỏ lưu bearer token trong `localStorage`; hiện dùng `sessionStorage` + in-memory cho SPA demo. Hướng production tốt hơn là chuyển sang httpOnly secure cookie + CSRF protection.
 - Chưa có rate limit / lockout cho đăng nhập.
 - Phân quyền hiện vẫn là global permission, chưa có warehouse-level scope hay object-level scope.
 - CORS đang để khá rộng cho môi trường dev, chưa siết theo hướng production.
@@ -1077,6 +1093,7 @@ Thứ tự tiếp theo an toàn nhất cho project:
 1. Hoàn thiện tiếp Module 6 theo chiều sâu demo:
    - dashboard/tổng quan nhanh cho các dòng tồn thấp và hết hàng
    - lịch kiểm kê hoặc chứng từ kiểm kê định kỳ nếu cần nâng demo
+   - barcode/QR, lô hàng, hạn sử dụng, serial number nếu muốn nâng độ thật nghiệp vụ
    - tối ưu thêm UX cho các phiếu kho nhiều dòng
 2. Hoàn thiện sâu hơn Module 7:
    - bằng chứng giao nhận

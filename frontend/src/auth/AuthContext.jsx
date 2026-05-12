@@ -6,6 +6,45 @@ import { AuthContext } from './auth-context';
 
 const STORAGE_KEY = 'warehouse-auth';
 
+function removeLegacyPersistentAuth() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Storage can be unavailable in restricted browser modes.
+  }
+}
+
+function readSessionAuth() {
+  removeLegacyPersistentAuth();
+  try {
+    const cached = sessionStorage.getItem(STORAGE_KEY);
+    return cached ? JSON.parse(cached) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSessionAuth(token) {
+  removeLegacyPersistentAuth();
+  sessionStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({
+      token,
+      storage: 'session',
+      saved_at: new Date().toISOString(),
+    }),
+  );
+}
+
+function clearSessionAuth() {
+  removeLegacyPersistentAuth();
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Best-effort cleanup.
+  }
+}
+
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
@@ -14,14 +53,13 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const cached = localStorage.getItem(STORAGE_KEY);
-    if (!cached) {
+    const parsed = readSessionAuth();
+    if (!parsed) {
       setLoading(false);
       return;
     }
 
     try {
-      const parsed = JSON.parse(cached);
       if (!parsed.token) {
         throw new Error('Missing token');
       }
@@ -30,14 +68,14 @@ export function AuthProvider({ children }) {
       api.get('/auth/me')
         .then((response) => setUser(response.data.user))
         .catch(() => {
-          localStorage.removeItem(STORAGE_KEY);
+          clearSessionAuth();
           setAuthToken(null);
           setToken(null);
           setUser(null);
         })
         .finally(() => setLoading(false));
     } catch {
-      localStorage.removeItem(STORAGE_KEY);
+      clearSessionAuth();
       setLoading(false);
     }
   }, []);
@@ -50,7 +88,7 @@ export function AuthProvider({ children }) {
     setAuthToken(nextToken);
     setToken(nextToken);
     setUser(nextUser);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ token: nextToken }));
+    writeSessionAuth(nextToken);
     return nextUser;
   }, []);
 
@@ -60,9 +98,9 @@ export function AuthProvider({ children }) {
         await api.post('/auth/logout');
       }
     } catch {
-      // JWT is stateless in this module, so local cleanup is enough if logout fails.
+      // Backend revokes the token when reachable; local cleanup still protects this tab if the network fails.
     } finally {
-      localStorage.removeItem(STORAGE_KEY);
+      clearSessionAuth();
       setAuthToken(null);
       setToken(null);
       setUser(null);

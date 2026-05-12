@@ -1,4 +1,13 @@
-from app.models import AuditLog, Inventory, InventoryMovement, Product, Stocktake, Warehouse, WarehouseLocation
+from app.models import (
+    AuditLog,
+    Inventory,
+    InventoryMovement,
+    Product,
+    Stocktake,
+    StocktakeApproval,
+    Warehouse,
+    WarehouseLocation,
+)
 
 
 def get_stocktake_context(app):
@@ -194,6 +203,151 @@ def test_confirm_stocktake_updates_inventory_and_creates_movements(client, auth_
         assert all(movement.reference_type == "stocktake" for movement in movements)
         assert {movement.movement_type for movement in movements} == {"stocktake_adjustment"}
         assert audit_actions == {"stocktakes.created", "stocktakes.confirmed"}
+
+
+def test_stocktake_multi_level_approval_confirms_only_after_final_level(client, auth_headers, app):
+    context = get_stocktake_context(app)
+
+    create_response = client.post(
+        "/stocktakes",
+        headers=auth_headers("staff", "Staff@123"),
+        json={
+            "warehouse_id": context["warehouse_id"],
+            "note": "Kiem ke can duyet hai cap",
+            "details": [
+                {
+                    "product_id": context["printer_id"],
+                    "location_id": context["primary_location_id"],
+                    "actual_quantity": 11,
+                },
+            ],
+        },
+    )
+    stocktake_id = create_response.get_json()["item"]["id"]
+
+    submit_response = client.post(
+        f"/stocktakes/{stocktake_id}/submit-for-approval",
+        headers=auth_headers("staff", "Staff@123"),
+    )
+    staff_approve_response = client.post(
+        f"/stocktakes/{stocktake_id}/approve",
+        headers=auth_headers("staff", "Staff@123"),
+    )
+    manager_approve_response = client.post(
+        f"/stocktakes/{stocktake_id}/approve",
+        headers=auth_headers("manager", "Manager@123"),
+        json={"note": "Duyet cap quan ly kho"},
+    )
+
+    assert submit_response.status_code == 200
+    assert submit_response.get_json()["item"]["status"] == "pending_approval"
+    assert submit_response.get_json()["item"]["current_approval_level"] == 1
+    assert staff_approve_response.status_code == 403
+    assert manager_approve_response.status_code == 200
+    assert manager_approve_response.get_json()["item"]["status"] == "pending_approval"
+    assert manager_approve_response.get_json()["item"]["current_approval_level"] == 2
+    assert manager_approve_response.get_json()["item"]["approved_levels"] == 1
+
+    with app.app_context():
+        inventory_row = Inventory.query.filter_by(
+            warehouse_id=context["warehouse_id"],
+            location_id=context["primary_location_id"],
+            product_id=context["printer_id"],
+        ).first()
+        movement = InventoryMovement.query.filter_by(
+            reference_type="stocktake",
+            reference_id=stocktake_id,
+        ).first()
+
+        assert inventory_row.quantity == context["starting_printer_quantity"]
+        assert movement is None
+
+    admin_approve_response = client.post(
+        f"/stocktakes/{stocktake_id}/approve",
+        headers=auth_headers("admin", "Admin@123"),
+        json={"note": "Duyet cap cuoi"},
+    )
+
+    assert admin_approve_response.status_code == 200
+    assert admin_approve_response.get_json()["item"]["status"] == "confirmed"
+    assert admin_approve_response.get_json()["item"]["approved_levels"] == 2
+
+    with app.app_context():
+        inventory_row = Inventory.query.filter_by(
+            warehouse_id=context["warehouse_id"],
+            location_id=context["primary_location_id"],
+            product_id=context["printer_id"],
+        ).first()
+        stocktake = Stocktake.query.filter_by(id=stocktake_id).first()
+        approvals = StocktakeApproval.query.filter_by(stocktake_id=stocktake_id).order_by(
+            StocktakeApproval.approval_level.asc()
+        ).all()
+        movement = InventoryMovement.query.filter_by(
+            reference_type="stocktake",
+            reference_id=stocktake_id,
+        ).first()
+
+        assert inventory_row.quantity == 11
+        assert stocktake.status == "confirmed"
+        assert [approval.approval_level for approval in approvals] == [1, 2]
+        assert all(approval.status == "approved" for approval in approvals)
+        assert movement is not None
+        assert movement.movement_type == "stocktake_adjustment"
+
+
+def test_stocktake_approval_reject_does_not_change_inventory(client, auth_headers, app):
+    context = get_stocktake_context(app)
+
+    create_response = client.post(
+        "/stocktakes",
+        headers=auth_headers("staff", "Staff@123"),
+        json={
+            "warehouse_id": context["warehouse_id"],
+            "details": [
+                {
+                    "product_id": context["trolley_id"],
+                    "location_id": context["primary_location_id"],
+                    "actual_quantity": 4,
+                },
+            ],
+        },
+    )
+    stocktake_id = create_response.get_json()["item"]["id"]
+
+    submit_response = client.post(
+        f"/stocktakes/{stocktake_id}/submit-for-approval",
+        headers=auth_headers("staff", "Staff@123"),
+    )
+    reject_response = client.post(
+        f"/stocktakes/{stocktake_id}/reject",
+        headers=auth_headers("manager", "Manager@123"),
+        json={"note": "Can kiem tra lai so lieu"},
+    )
+    approve_after_reject_response = client.post(
+        f"/stocktakes/{stocktake_id}/approve",
+        headers=auth_headers("manager", "Manager@123"),
+    )
+
+    assert submit_response.status_code == 200
+    assert reject_response.status_code == 200
+    assert reject_response.get_json()["item"]["status"] == "rejected"
+    assert approve_after_reject_response.status_code == 400
+
+    with app.app_context():
+        inventory_row = Inventory.query.filter_by(
+            warehouse_id=context["warehouse_id"],
+            location_id=context["primary_location_id"],
+            product_id=context["trolley_id"],
+        ).first()
+        approval = StocktakeApproval.query.filter_by(stocktake_id=stocktake_id).first()
+        movement = InventoryMovement.query.filter_by(
+            reference_type="stocktake",
+            reference_id=stocktake_id,
+        ).first()
+
+        assert inventory_row.quantity == context["starting_trolley_quantity"]
+        assert approval.status == "rejected"
+        assert movement is None
 
 
 def test_cancel_stocktake_draft_does_not_change_inventory(client, auth_headers, app):

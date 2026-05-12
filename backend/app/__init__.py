@@ -52,6 +52,18 @@ def create_app(config_object=None):
 
     register_blueprints(app)
     from . import socket_events  # noqa: F401
+    from .models import TokenBlocklist
+
+    @jwt.token_in_blocklist_loader
+    def is_token_revoked(_jwt_header, jwt_payload):
+        jti = jwt_payload.get("jti")
+        if not jti:
+            return True
+        return TokenBlocklist.query.filter_by(jti=jti).first() is not None
+
+    @jwt.revoked_token_loader
+    def revoked_token_response(_jwt_header, _jwt_payload):
+        return jsonify({"message": "Phiên đăng nhập đã hết hiệu lực. Vui lòng đăng nhập lại."}), 401
 
     @app.get("/health")
     def health():

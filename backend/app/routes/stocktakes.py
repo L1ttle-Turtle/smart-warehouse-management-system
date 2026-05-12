@@ -5,7 +5,7 @@ from sqlalchemy.orm import aliased, joinedload
 
 from ..audit import log_audit_event
 from ..extensions import db
-from ..models import Product, Stocktake, StocktakeDetail, Warehouse, WarehouseLocation
+from ..models import Product, Stocktake, StocktakeApproval, StocktakeDetail, Warehouse, WarehouseLocation
 from ..permissions import get_current_user, permission_required
 from ..schemas import StocktakeSchema
 from ..serializers import serialize_stocktake
@@ -22,6 +22,12 @@ SORT_FIELDS = {
     "updated_at": Stocktake.updated_at,
     "confirmed_at": Stocktake.confirmed_at,
     "cancelled_at": Stocktake.cancelled_at,
+}
+
+STOCKTAKE_REQUIRED_APPROVAL_LEVELS = 2
+STOCKTAKE_APPROVAL_ROLES = {
+    1: {"manager", "admin"},
+    2: {"admin"},
 }
 
 
@@ -81,6 +87,11 @@ def build_pagination_payload(pagination):
         "page": pagination.page,
         "page_size": pagination.per_page,
     }
+
+
+def get_payload_note():
+    payload = request.get_json(silent=True) or {}
+    return normalize_optional_text(payload.get("note"))
 
 
 def apply_sort(query):
@@ -177,6 +188,16 @@ def audit_stocktake_change(action, actor_user_id, stocktake):
     )
 
 
+def get_stocktake_approval_roles(level):
+    return STOCKTAKE_APPROVAL_ROLES.get(level, {"admin"})
+
+
+def ensure_user_can_approve_level(user, level):
+    role_name = user.role.role_name if user.role else None
+    if role_name not in get_stocktake_approval_roles(level):
+        abort(403, description="Tài khoản hiện tại không có quyền duyệt cấp này.")
+
+
 def claim_draft_stocktake_for_mutation(stocktake_id, lock_status, error_message):
     claimed_rows = (
         db.session.query(Stocktake)
@@ -192,9 +213,36 @@ def claim_draft_stocktake_for_mutation(stocktake_id, lock_status, error_message)
             abort(404)
         abort(400, description=error_message)
 
+    db.session.expire_all()
     stocktake = db.session.get(Stocktake, stocktake_id)
     stocktake.status = "draft"
     return stocktake
+
+
+def claim_pending_stocktake_for_mutation(stocktake_id, lock_status, error_message):
+    stocktake = db.session.get(Stocktake, stocktake_id)
+    if not stocktake:
+        abort(404)
+    if stocktake.status != "pending_approval":
+        abort(400, description=error_message)
+
+    expected_level = stocktake.current_approval_level or 1
+    claimed_rows = (
+        db.session.query(Stocktake)
+        .filter(
+            Stocktake.id == stocktake_id,
+            Stocktake.status == "pending_approval",
+            Stocktake.current_approval_level == expected_level,
+        )
+        .update({"status": lock_status}, synchronize_session=False)
+    )
+    if claimed_rows == 0:
+        abort(409, description="Phiếu kiểm kê đang được xử lý bởi thao tác khác, vui lòng tải lại.")
+
+    db.session.expire_all()
+    stocktake = db.session.get(Stocktake, stocktake_id)
+    stocktake.current_approval_level = expected_level
+    return stocktake, expected_level
 
 
 @stocktakes_bp.get("/stocktakes")
@@ -207,8 +255,11 @@ def list_stocktakes():
         .options(
             joinedload(Stocktake.warehouse),
             joinedload(Stocktake.creator),
+            joinedload(Stocktake.submitter),
             joinedload(Stocktake.confirmer),
             joinedload(Stocktake.canceller),
+            joinedload(Stocktake.rejecter),
+            joinedload(Stocktake.approvals).joinedload(StocktakeApproval.approver),
             joinedload(Stocktake.details).joinedload(StocktakeDetail.product),
             joinedload(Stocktake.details).joinedload(StocktakeDetail.location),
         )
@@ -270,8 +321,11 @@ def get_stocktake(stocktake_id):
         Stocktake.query.options(
             joinedload(Stocktake.warehouse),
             joinedload(Stocktake.creator),
+            joinedload(Stocktake.submitter),
             joinedload(Stocktake.confirmer),
             joinedload(Stocktake.canceller),
+            joinedload(Stocktake.rejecter),
+            joinedload(Stocktake.approvals).joinedload(StocktakeApproval.approver),
             joinedload(Stocktake.details).joinedload(StocktakeDetail.product),
             joinedload(Stocktake.details).joinedload(StocktakeDetail.location),
         )
@@ -299,6 +353,109 @@ def update_stocktake(stocktake_id):
         stocktake.note = payload.get("note")
         sync_stocktake_details(stocktake, payload["details"])
         audit_stocktake_change("stocktakes.updated", current_user.id, stocktake)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+
+    return jsonify({"item": serialize_stocktake(stocktake)})
+
+
+@stocktakes_bp.post("/stocktakes/<int:stocktake_id>/submit-for-approval")
+@jwt_required()
+@permission_required("inventory.manage")
+def submit_stocktake_for_approval_route(stocktake_id):
+    current_user = get_current_user()
+    try:
+        stocktake = claim_draft_stocktake_for_mutation(
+            stocktake_id,
+            "submitting",
+            "Chỉ phiếu kiểm kê ở trạng thái nháp mới có thể gửi duyệt.",
+        )
+        stocktake.status = "pending_approval"
+        stocktake.submitted_by = current_user.id
+        stocktake.submitted_at = utc_now()
+        stocktake.current_approval_level = 1
+        stocktake.required_approval_levels = STOCKTAKE_REQUIRED_APPROVAL_LEVELS
+        audit_stocktake_change("stocktakes.submitted", current_user.id, stocktake)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+
+    return jsonify({"item": serialize_stocktake(stocktake)})
+
+
+@stocktakes_bp.post("/stocktakes/<int:stocktake_id>/approve")
+@jwt_required()
+@permission_required("inventory.manage")
+def approve_stocktake_route(stocktake_id):
+    current_user = get_current_user()
+    note = get_payload_note()
+    try:
+        stocktake, approval_level = claim_pending_stocktake_for_mutation(
+            stocktake_id,
+            "approving",
+            "Chỉ phiếu kiểm kê đang chờ duyệt mới có thể duyệt.",
+        )
+        ensure_user_can_approve_level(current_user, approval_level)
+
+        approval = StocktakeApproval(
+            stocktake_id=stocktake.id,
+            approval_level=approval_level,
+            approver_id=current_user.id,
+            status="approved",
+            note=note,
+            decided_at=utc_now(),
+        )
+        db.session.add(approval)
+        audit_stocktake_change("stocktakes.approved", current_user.id, stocktake)
+
+        if approval_level >= stocktake.required_approval_levels:
+            confirm_stocktake(stocktake, current_user.id, allowed_statuses={"approving"})
+            audit_stocktake_change("stocktakes.confirmed", current_user.id, stocktake)
+        else:
+            stocktake.current_approval_level = approval_level + 1
+            stocktake.status = "pending_approval"
+
+        db.session.commit()
+    except ValueError as exc:
+        db.session.rollback()
+        abort(400, description=str(exc))
+    except Exception:
+        db.session.rollback()
+        raise
+
+    return jsonify({"item": serialize_stocktake(stocktake)})
+
+
+@stocktakes_bp.post("/stocktakes/<int:stocktake_id>/reject")
+@jwt_required()
+@permission_required("inventory.manage")
+def reject_stocktake_route(stocktake_id):
+    current_user = get_current_user()
+    note = get_payload_note()
+    try:
+        stocktake, approval_level = claim_pending_stocktake_for_mutation(
+            stocktake_id,
+            "rejecting",
+            "Chỉ phiếu kiểm kê đang chờ duyệt mới có thể từ chối.",
+        )
+        ensure_user_can_approve_level(current_user, approval_level)
+
+        approval = StocktakeApproval(
+            stocktake_id=stocktake.id,
+            approval_level=approval_level,
+            approver_id=current_user.id,
+            status="rejected",
+            note=note,
+            decided_at=utc_now(),
+        )
+        db.session.add(approval)
+        stocktake.status = "rejected"
+        stocktake.rejected_by = current_user.id
+        stocktake.rejected_at = utc_now()
+        audit_stocktake_change("stocktakes.rejected", current_user.id, stocktake)
         db.session.commit()
     except Exception:
         db.session.rollback()

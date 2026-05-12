@@ -12,6 +12,7 @@ from ..models import (
     WarehouseLocation,
 )
 from ..utils import utc_now
+from .inventory_alerts import create_low_stock_notifications
 
 
 def validate_location_in_warehouse(location_id, warehouse_id):
@@ -98,6 +99,7 @@ def adjust_inventory(
     )
     db.session.add(movement)
     refresh_product_quantity(product_id)
+    create_low_stock_notifications(record, movement)
     return movement
 
 
@@ -209,8 +211,9 @@ def confirm_stock_transfer(transfer: StockTransfer, actor_id):
     transfer.confirmed_at = utc_now()
 
 
-def confirm_stocktake(stocktake: Stocktake, actor_id):
-    if stocktake.status != "draft":
+def confirm_stocktake(stocktake: Stocktake, actor_id, allowed_statuses=None):
+    allowed_statuses = set(allowed_statuses or {"draft"})
+    if stocktake.status not in allowed_statuses:
         raise ValueError("Chỉ phiếu kiểm kê ở trạng thái nháp mới có thể xác nhận.")
     if not stocktake.details:
         raise ValueError("Phiếu kiểm kê phải có ít nhất một dòng trước khi xác nhận.")

@@ -4,10 +4,12 @@ from app.models import (
     ExportReceipt,
     Inventory,
     InventoryMovement,
+    Notification,
     Product,
     Warehouse,
     WarehouseLocation,
 )
+from app.extensions import db
 
 
 def get_seed_export_context(app):
@@ -98,6 +100,51 @@ def test_staff_can_create_and_confirm_export_receipt_and_inventory_decreases(cli
         assert movement.movement_type == "export"
         assert movement.quantity_change == -3
         assert movement.quantity_after == context["starting_quantity"] - 3
+
+
+def test_export_confirm_creates_low_stock_notifications_for_inventory_managers(client, auth_headers, app):
+    context = get_seed_export_context(app)
+    export_quantity = 3
+
+    with app.app_context():
+        product = db.session.get(Product, context["product_id"])
+        product.min_stock = context["starting_quantity"] - export_quantity + 1
+        db.session.commit()
+
+    create_response = client.post(
+        "/export-receipts",
+        headers=auth_headers("staff", "Staff@123"),
+        json={
+            "warehouse_id": context["warehouse_id"],
+            "customer_id": context["customer_id"],
+            "note": "Xuat hang tao canh bao ton thap",
+            "items": [
+                {
+                    "product_id": context["product_id"],
+                    "location_id": context["location_id"],
+                    "quantity": export_quantity,
+                },
+            ],
+        },
+    )
+    receipt_id = create_response.get_json()["item"]["id"]
+
+    confirm_response = client.post(
+        f"/export-receipts/{receipt_id}/confirm",
+        headers=auth_headers("staff", "Staff@123"),
+    )
+
+    assert confirm_response.status_code == 200
+
+    with app.app_context():
+        notifications = Notification.query.filter(
+            Notification.type == "inventory",
+            Notification.title.like("%PRD001%"),
+        ).all()
+        receiver_roles = {notification.receiver.role.role_name for notification in notifications}
+
+        assert receiver_roles == {"admin", "manager"}
+        assert all("tồn thấp" in notification.content.lower() for notification in notifications)
 
 
 def test_export_receipt_permission_matrix(client, auth_headers):

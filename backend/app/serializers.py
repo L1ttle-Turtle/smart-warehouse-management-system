@@ -22,6 +22,7 @@ from .models import (
     Role,
     Shipment,
     Stocktake,
+    StocktakeApproval,
     StocktakeDetail,
     StockTransfer,
     StockTransferDetail,
@@ -733,9 +734,26 @@ def serialize_stocktake_detail(detail: StocktakeDetail):
     }
 
 
+def serialize_stocktake_approval(approval: StocktakeApproval):
+    return {
+        "id": approval.id,
+        "stocktake_id": approval.stocktake_id,
+        "approval_level": approval.approval_level,
+        "approver_id": approval.approver_id,
+        "approver_name": approval.approver.full_name if approval.approver else None,
+        "approver_role": approval.approver.role.role_name if approval.approver and approval.approver.role else None,
+        "status": approval.status,
+        "note": approval.note,
+        "decided_at": approval.decided_at.isoformat() if approval.decided_at else None,
+        "created_at": approval.created_at.isoformat() if approval.created_at else None,
+        "updated_at": approval.updated_at.isoformat() if approval.updated_at else None,
+    }
+
+
 def serialize_stocktake(stocktake: Stocktake):
     total_difference = sum(detail.difference_quantity for detail in stocktake.details)
     total_actual_quantity = sum(detail.actual_quantity for detail in stocktake.details)
+    approved_levels = len([approval for approval in stocktake.approvals if approval.status == "approved"])
     return {
         "id": stocktake.id,
         "stocktake_code": stocktake.stocktake_code,
@@ -744,20 +762,31 @@ def serialize_stocktake(stocktake: Stocktake):
         "warehouse_name": stocktake.warehouse.warehouse_name if stocktake.warehouse else None,
         "created_by": stocktake.created_by,
         "created_by_name": stocktake.creator.full_name if stocktake.creator else None,
+        "submitted_by": stocktake.submitted_by,
+        "submitted_by_name": stocktake.submitter.full_name if stocktake.submitter else None,
         "confirmed_by": stocktake.confirmed_by,
         "confirmed_by_name": stocktake.confirmer.full_name if stocktake.confirmer else None,
         "cancelled_by": stocktake.cancelled_by,
         "cancelled_by_name": stocktake.canceller.full_name if stocktake.canceller else None,
+        "rejected_by": stocktake.rejected_by,
+        "rejected_by_name": stocktake.rejecter.full_name if stocktake.rejecter else None,
         "status": stocktake.status,
+        "current_approval_level": stocktake.current_approval_level,
+        "required_approval_levels": stocktake.required_approval_levels,
+        "approved_levels": approved_levels,
+        "approval_progress_label": f"{approved_levels}/{stocktake.required_approval_levels}",
         "note": stocktake.note,
         "detail_count": len(stocktake.details),
         "total_actual_quantity": total_actual_quantity,
         "total_difference_quantity": total_difference,
+        "submitted_at": stocktake.submitted_at.isoformat() if stocktake.submitted_at else None,
         "confirmed_at": stocktake.confirmed_at.isoformat() if stocktake.confirmed_at else None,
         "cancelled_at": stocktake.cancelled_at.isoformat() if stocktake.cancelled_at else None,
+        "rejected_at": stocktake.rejected_at.isoformat() if stocktake.rejected_at else None,
         "created_at": stocktake.created_at.isoformat() if stocktake.created_at else None,
         "updated_at": stocktake.updated_at.isoformat() if stocktake.updated_at else None,
         "details": [serialize_stocktake_detail(detail) for detail in stocktake.details],
+        "approvals": [serialize_stocktake_approval(approval) for approval in stocktake.approvals],
     }
 
 

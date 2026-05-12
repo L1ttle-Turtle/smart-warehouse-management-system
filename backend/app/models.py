@@ -92,6 +92,19 @@ class AuditLog(db.Model, SerializerMixin):
     )
 
 
+class TokenBlocklist(db.Model, SerializerMixin):
+    __tablename__ = "token_blocklist"
+
+    id = db.Column(db.Integer, primary_key=True)
+    jti = db.Column(db.String(36), unique=True, nullable=False, index=True)
+    token_type = db.Column(db.String(20), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    revoked_at = db.Column(db.DateTime, default=utc_now, nullable=False, index=True)
+    expires_at = db.Column(db.DateTime, nullable=False, index=True)
+
+    user = db.relationship("User")
+
+
 class UserPermissionDelegation(db.Model, SerializerMixin, TimestampMixin):
     __tablename__ = "user_permission_delegations"
     __table_args__ = (
@@ -676,22 +689,36 @@ class Stocktake(db.Model, SerializerMixin, TimestampMixin):
     stocktake_code = db.Column(db.String(30), unique=True, nullable=False)
     warehouse_id = db.Column(db.Integer, db.ForeignKey("warehouses.id"), nullable=False)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    submitted_by = db.Column(db.Integer, db.ForeignKey("users.id"))
     confirmed_by = db.Column(db.Integer, db.ForeignKey("users.id"))
     cancelled_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    rejected_by = db.Column(db.Integer, db.ForeignKey("users.id"))
     status = db.Column(db.String(20), default="draft", nullable=False)
+    current_approval_level = db.Column(db.Integer, default=0, nullable=False)
+    required_approval_levels = db.Column(db.Integer, default=2, nullable=False)
     note = db.Column(db.String(255))
+    submitted_at = db.Column(db.DateTime)
     confirmed_at = db.Column(db.DateTime)
     cancelled_at = db.Column(db.DateTime)
+    rejected_at = db.Column(db.DateTime)
 
     warehouse = db.relationship("Warehouse", foreign_keys=[warehouse_id])
     creator = db.relationship("User", foreign_keys=[created_by])
+    submitter = db.relationship("User", foreign_keys=[submitted_by])
     confirmer = db.relationship("User", foreign_keys=[confirmed_by])
     canceller = db.relationship("User", foreign_keys=[cancelled_by])
+    rejecter = db.relationship("User", foreign_keys=[rejected_by])
     details = db.relationship(
         "StocktakeDetail",
         back_populates="stocktake",
         cascade="all, delete-orphan",
         order_by="StocktakeDetail.id",
+    )
+    approvals = db.relationship(
+        "StocktakeApproval",
+        back_populates="stocktake",
+        cascade="all, delete-orphan",
+        order_by="StocktakeApproval.approval_level",
     )
 
 
@@ -718,6 +745,28 @@ class StocktakeDetail(db.Model, SerializerMixin, TimestampMixin):
     stocktake = db.relationship("Stocktake", back_populates="details")
     product = db.relationship("Product", foreign_keys=[product_id])
     location = db.relationship("WarehouseLocation", foreign_keys=[location_id])
+
+
+class StocktakeApproval(db.Model, SerializerMixin, TimestampMixin):
+    __tablename__ = "stocktake_approvals"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "stocktake_id",
+            "approval_level",
+            name="uq_stocktake_approval_level",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    stocktake_id = db.Column(db.Integer, db.ForeignKey("stocktakes.id"), nullable=False)
+    approval_level = db.Column(db.Integer, nullable=False)
+    approver_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    status = db.Column(db.String(20), nullable=False)
+    note = db.Column(db.String(255))
+    decided_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+
+    stocktake = db.relationship("Stocktake", back_populates="approvals")
+    approver = db.relationship("User", foreign_keys=[approver_id])
 
 
 class User(db.Model, SerializerMixin, TimestampMixin):

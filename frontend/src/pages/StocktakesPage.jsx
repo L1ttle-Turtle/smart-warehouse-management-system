@@ -21,6 +21,7 @@ import {
   Select,
   Space,
   Table,
+  Tag,
   Typography,
   message,
 } from 'antd';
@@ -35,17 +36,34 @@ import { formatDateTime, formatNumber } from '../utils/format';
 const STATUS_OPTIONS = [
   { label: 'Tất cả trạng thái', value: 'all' },
   { label: 'Nháp', value: 'draft' },
+  { label: 'Chờ duyệt', value: 'pending_approval' },
   { label: 'Đã xác nhận', value: 'confirmed' },
+  { label: 'Đã từ chối', value: 'rejected' },
   { label: 'Đã hủy', value: 'cancelled' },
 ];
+
+const STOCKTAKE_STATUS_META = {
+  draft: { label: 'Nháp', color: 'gold' },
+  pending_approval: { label: 'Chờ duyệt', color: 'blue' },
+  confirmed: { label: 'Đã xác nhận', color: 'green' },
+  rejected: { label: 'Đã từ chối', color: 'volcano' },
+  cancelled: { label: 'Đã hủy', color: 'red' },
+};
+
+function renderStocktakeStatus(value) {
+  const meta = STOCKTAKE_STATUS_META[value] || { label: value || '-', color: 'default' };
+  return <Tag color={meta.color}>{meta.label}</Tag>;
+}
 
 function buildInventoryKey(warehouseId, locationId, productId) {
   return `${warehouseId}-${locationId}-${productId}`;
 }
 
 function StocktakesPage() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const canManage = hasPermission('inventory.manage');
+  const roleName = user?.role || user?.role_name || null;
+  const canApproveStocktake = ['admin', 'manager'].includes(roleName);
 
   const [form] = Form.useForm();
   const watchedWarehouseId = Form.useWatch('warehouse_id', form);
@@ -53,7 +71,9 @@ function StocktakesPage() {
 
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [confirmingId, setConfirmingId] = useState(null);
+  const [submittingApprovalId, setSubmittingApprovalId] = useState(null);
+  const [approvingId, setApprovingId] = useState(null);
+  const [rejectingId, setRejectingId] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingStocktake, setEditingStocktake] = useState(null);
@@ -266,10 +286,26 @@ function StocktakesPage() {
       };
     }
 
+    if (selectedStocktake.status === 'pending_approval') {
+      return {
+        type: 'warning',
+        title: `Phiếu đang chờ duyệt cấp ${formatNumber(selectedStocktake.current_approval_level)}.`,
+        description: `Tiến độ duyệt hiện tại: ${selectedStocktake.approval_progress_label || '0/2'}. Tồn kho thật chưa thay đổi cho đến khi phiếu được duyệt đủ cấp.`,
+      };
+    }
+
+    if (selectedStocktake.status === 'rejected') {
+      return {
+        type: 'error',
+        title: 'Phiếu đã bị từ chối, tồn kho không thay đổi.',
+        description: 'Có thể tạo phiếu kiểm kê mới nếu cần rà soát lại số liệu sau khi người duyệt phản hồi.',
+      };
+    }
+
     return {
       type: 'warning',
       title: 'Phiếu đang ở trạng thái nháp, chưa làm thay đổi tồn kho thật.',
-      description: 'Bạn có thể sửa số lượng thực tế trước khi xác nhận. Chỉ khi xác nhận hệ thống mới sinh movement và cập nhật tồn kho.',
+      description: 'Bạn có thể sửa số lượng thực tế trước khi gửi duyệt. Chỉ khi duyệt đủ cấp hệ thống mới sinh movement và cập nhật tồn kho.',
     };
   }, [selectedStocktake]);
 
@@ -295,6 +331,16 @@ function StocktakesPage() {
     const inventoryRow = inventoryLookup.get(buildInventoryKey(warehouseId, locationId, productId));
     return Number(inventoryRow?.quantity || 0);
   }, [inventoryLookup]);
+
+  const canApproveCurrentLevel = useCallback((stocktake) => {
+    if (!stocktake || stocktake.status !== 'pending_approval' || !canApproveStocktake) {
+      return false;
+    }
+    if (Number(stocktake.current_approval_level || 1) >= 2) {
+      return roleName === 'admin';
+    }
+    return roleName === 'admin' || roleName === 'manager';
+  }, [canApproveStocktake, roleName]);
 
   const openCreateDrawer = () => {
     setEditingStocktake(null);
@@ -357,13 +403,44 @@ function StocktakesPage() {
     }
   };
 
-  const handleConfirm = async (stocktake) => {
+  const handleSubmitForApproval = async (stocktake) => {
     const nextStatusFilter = statusFilter === 'draft' ? 'all' : statusFilter;
 
-    setConfirmingId(stocktake.id);
+    setSubmittingApprovalId(stocktake.id);
     try {
-      await api.post(`/stocktakes/${stocktake.id}/confirm`);
-      message.success(`Đã xác nhận phiếu ${stocktake.stocktake_code} và cập nhật tồn kho thật.`);
+      await api.post(`/stocktakes/${stocktake.id}/submit-for-approval`);
+      message.success(`Đã gửi phiếu ${stocktake.stocktake_code} vào quy trình duyệt.`);
+      setSelectedStocktakeId(stocktake.id);
+
+      if (nextStatusFilter !== statusFilter) {
+        setStatusFilter(nextStatusFilter);
+        setPagination((current) => ({ ...current, current: 1 }));
+      }
+
+      await fetchStocktakes({
+        page: 1,
+        status: nextStatusFilter,
+        warehouse: warehouseFilter,
+        search: searchQuery,
+      });
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Không gửi duyệt được phiếu kiểm kê.');
+    } finally {
+      setSubmittingApprovalId(null);
+    }
+  };
+
+  const handleApprove = async (stocktake) => {
+    const nextStatusFilter = statusFilter === 'pending_approval' ? 'all' : statusFilter;
+
+    setApprovingId(stocktake.id);
+    try {
+      const response = await api.post(`/stocktakes/${stocktake.id}/approve`);
+      const nextStocktake = response.data.item;
+      const isConfirmed = nextStocktake?.status === 'confirmed';
+      message.success(isConfirmed
+        ? `Phiếu ${stocktake.stocktake_code} đã đủ cấp duyệt và tồn kho đã được cập nhật.`
+        : `Đã duyệt cấp ${formatNumber(stocktake.current_approval_level)} cho phiếu ${stocktake.stocktake_code}.`);
       setSelectedStocktakeId(stocktake.id);
 
       if (nextStatusFilter !== statusFilter) {
@@ -382,9 +459,37 @@ function StocktakesPage() {
         fetchStocktakeMovements(stocktake.id),
       ]);
     } catch (error) {
-      message.error(error.response?.data?.message || 'Không xác nhận được phiếu kiểm kê.');
+      message.error(error.response?.data?.message || 'Không duyệt được phiếu kiểm kê.');
     } finally {
-      setConfirmingId(null);
+      setApprovingId(null);
+    }
+  };
+
+  const handleReject = async (stocktake) => {
+    const nextStatusFilter = statusFilter === 'pending_approval' ? 'all' : statusFilter;
+
+    setRejectingId(stocktake.id);
+    try {
+      await api.post(`/stocktakes/${stocktake.id}/reject`);
+      message.success(`Đã từ chối phiếu ${stocktake.stocktake_code}. Tồn kho không thay đổi.`);
+      setSelectedStocktakeId(stocktake.id);
+
+      if (nextStatusFilter !== statusFilter) {
+        setStatusFilter(nextStatusFilter);
+        setPagination((current) => ({ ...current, current: 1 }));
+      }
+
+      await fetchStocktakes({
+        page: 1,
+        status: nextStatusFilter,
+        warehouse: warehouseFilter,
+        search: searchQuery,
+      });
+      setStocktakeMovements([]);
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Không từ chối được phiếu kiểm kê.');
+    } finally {
+      setRejectingId(null);
     }
   };
 
@@ -445,6 +550,34 @@ function StocktakesPage() {
           {formatNumber(value)}
         </Typography.Text>
       ),
+    },
+    {
+      title: 'Ghi chú',
+      dataIndex: 'note',
+      render: (value) => value || '-',
+    },
+  ];
+
+  const approvalColumns = [
+    {
+      title: 'Cấp duyệt',
+      dataIndex: 'approval_level',
+      render: (value) => `Cấp ${formatNumber(value)}`,
+    },
+    {
+      title: 'Người xử lý',
+      dataIndex: 'approver_name',
+      render: (value, record) => `${value || '-'}${record.approver_role ? ` (${record.approver_role})` : ''}`,
+    },
+    {
+      title: 'Kết quả',
+      dataIndex: 'status',
+      render: (value) => <StatusTag value={value} />,
+    },
+    {
+      title: 'Thời gian',
+      dataIndex: 'decided_at',
+      render: formatDateTime,
     },
     {
       title: 'Ghi chú',
@@ -517,8 +650,7 @@ function StocktakesPage() {
             Kiểm kê kho
           </Typography.Title>
           <Typography.Paragraph className="page-subtitle" style={{ marginBottom: 0 }}>
-            Tạo phiếu kiểm kê nhiều dòng, lưu nháp để rà soát chênh lệch và chỉ cập nhật tồn kho thật khi
-            xác nhận phiếu.
+            Tạo phiếu kiểm kê nhiều dòng, gửi duyệt qua 2 cấp và chỉ cập nhật tồn kho thật khi phiếu đã được duyệt đủ cấp.
           </Typography.Paragraph>
         </Space>
       </Card>
@@ -535,7 +667,7 @@ function StocktakesPage() {
           <Card className="page-card" styles={{ body: { padding: 20 } }}>
             <Typography.Text type="secondary">Phiếu nháp trên trang</Typography.Text>
             <div className="metric-value">{formatNumber(summary.draftCount)}</div>
-            <Typography.Text type="secondary">Có thể sửa hoặc hủy trước khi xác nhận</Typography.Text>
+            <Typography.Text type="secondary">Có thể sửa hoặc hủy trước khi gửi duyệt</Typography.Text>
           </Card>
         </Col>
         <Col xs={24} md={12} xl={6}>
@@ -556,7 +688,7 @@ function StocktakesPage() {
 
       <SectionCard
         title="Danh sách phiếu kiểm kê"
-        subtitle="Có thể tìm kiếm theo mã phiếu, ghi chú hoặc kho, sau đó theo dõi chi tiết và xác nhận phiếu nháp."
+        subtitle="Có thể tìm kiếm theo mã phiếu, ghi chú hoặc kho, sau đó gửi duyệt, duyệt cấp và theo dõi chi tiết phiếu."
         extra={canManage ? (
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreateDrawer}>
             Thêm phiếu kiểm kê
@@ -664,7 +796,12 @@ function StocktakesPage() {
             {
               title: 'Trạng thái',
               dataIndex: 'status',
-              render: (value) => <StatusTag value={value} />,
+              render: renderStocktakeStatus,
+            },
+            {
+              title: 'Tiến độ duyệt',
+              dataIndex: 'approval_progress_label',
+              render: (value, record) => (record.status === 'draft' ? '-' : value || '-'),
             },
             {
               title: 'Người tạo',
@@ -701,13 +838,13 @@ function StocktakesPage() {
                         size="small"
                         type="primary"
                         icon={<CheckCircleOutlined />}
-                        loading={confirmingId === record.id}
+                        loading={submittingApprovalId === record.id}
                         onClick={(event) => {
                           event.stopPropagation();
-                          handleConfirm(record);
+                          handleSubmitForApproval(record);
                         }}
                       >
-                        Xác nhận
+                        Gửi duyệt
                       </Button>
                       <Popconfirm
                         title="Hủy phiếu kiểm kê nháp?"
@@ -725,6 +862,40 @@ function StocktakesPage() {
                           onClick={(event) => event.stopPropagation()}
                         >
                           Hủy phiếu
+                        </Button>
+                      </Popconfirm>
+                    </>
+                  ) : null}
+                  {canApproveCurrentLevel(record) ? (
+                    <>
+                      <Button
+                        size="small"
+                        type="primary"
+                        icon={<CheckCircleOutlined />}
+                        loading={approvingId === record.id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleApprove(record);
+                        }}
+                      >
+                        Duyệt cấp {formatNumber(record.current_approval_level || 1)}
+                      </Button>
+                      <Popconfirm
+                        title="Từ chối phiếu kiểm kê?"
+                        description="Phiếu sẽ chuyển sang trạng thái từ chối và không làm thay đổi tồn kho."
+                        okText="Từ chối"
+                        cancelText="Giữ lại"
+                        okButtonProps={{ danger: true }}
+                        onConfirm={() => handleReject(record)}
+                      >
+                        <Button
+                          danger
+                          size="small"
+                          icon={<StopOutlined />}
+                          loading={rejectingId === record.id}
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          Từ chối
                         </Button>
                       </Popconfirm>
                     </>
@@ -779,6 +950,34 @@ function StocktakesPage() {
               title={selectedStocktakeAlert.title}
               description={selectedStocktakeAlert.description}
             />
+
+            <Card className="page-card" styles={{ body: { padding: 18 } }}>
+              <Space orientation="vertical" size={12} style={{ width: '100%' }}>
+                <Typography.Title level={5} style={{ margin: 0 }}>
+                  Lịch sử phê duyệt
+                </Typography.Title>
+                <Typography.Text type="secondary">
+                  Phiếu kiểm kê cần đủ {formatNumber(selectedStocktake.required_approval_levels || 2)} cấp duyệt trước khi hệ thống ghi tăng/giảm tồn kho thật.
+                </Typography.Text>
+                <Table
+                  rowKey="id"
+                  size="small"
+                  pagination={false}
+                  dataSource={selectedStocktake.approvals || []}
+                  columns={approvalColumns}
+                  locale={{
+                    emptyText: (
+                      <Empty
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        description={selectedStocktake.status === 'draft'
+                          ? 'Phiếu nháp chưa được gửi vào quy trình duyệt.'
+                          : 'Chưa có cấp duyệt nào được ghi nhận.'}
+                      />
+                    ),
+                  }}
+                />
+              </Space>
+            </Card>
 
             <Card className="page-card" styles={{ body: { padding: 18 } }}>
               <Space orientation="vertical" size={12} style={{ width: '100%' }}>
@@ -840,10 +1039,10 @@ function StocktakesPage() {
           <Alert
             showIcon
             type={editingStocktake ? 'warning' : 'info'}
-            title={editingStocktake ? 'Chỉnh sửa phiếu kiểm kê nháp trước khi xác nhận' : 'Tạo phiếu kiểm kê nhiều dòng cho demo'}
+            title={editingStocktake ? 'Chỉnh sửa phiếu kiểm kê nháp trước khi gửi duyệt' : 'Tạo phiếu kiểm kê nhiều dòng cho demo'}
             description={editingStocktake
-              ? 'Hệ thống sẽ tính lại tồn hệ thống khi bạn lưu nháp. Tồn kho thật chỉ thay đổi khi xác nhận phiếu.'
-              : 'Bước này chỉ lưu phiếu nháp để rà soát chênh lệch. Sau khi xác nhận, hệ thống mới ghi movement và cập nhật tồn kho.'}
+              ? 'Hệ thống sẽ tính lại tồn hệ thống khi bạn lưu nháp. Tồn kho thật chỉ thay đổi khi phiếu được duyệt đủ cấp.'
+              : 'Bước này chỉ lưu phiếu nháp để rà soát chênh lệch. Sau khi duyệt đủ cấp, hệ thống mới ghi movement và cập nhật tồn kho.'}
           />
 
           <Form
