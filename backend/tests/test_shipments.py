@@ -238,12 +238,30 @@ def test_shipment_status_transition_rules(client, auth_headers, app):
     )
     assert invalid_response.status_code == 403
 
-    delivered_response = client.post(
+    delivered_without_proof_response = client.post(
         f"/shipments/{shipment_id}/status",
         headers=auth_headers("manager", "Manager@123"),
         json={"status": "delivered"},
     )
+    assert delivered_without_proof_response.status_code == 400
+
+    delivered_response = client.post(
+        f"/shipments/{shipment_id}/status",
+        headers=auth_headers("manager", "Manager@123"),
+        json={
+            "status": "delivered",
+            "delivery_recipient_name": "Anh Minh",
+            "delivery_proof_note": "Khach da nhan du hang va ky tren phieu giao.",
+            "delivery_proof_image_url": "https://example.com/pod/shp-tst-005.jpg",
+            "delivery_latitude": 10.7769,
+            "delivery_longitude": 106.7009,
+        },
+    )
     assert delivered_response.status_code == 200
+    delivered_payload = delivered_response.get_json()["item"]
+    assert delivered_payload["has_delivery_proof"] is True
+    assert delivered_payload["delivery_recipient_name"] == "Anh Minh"
+    assert delivered_payload["delivery_proof"]["image_url"] == "https://example.com/pod/shp-tst-005.jpg"
 
     repeat_response = client.post(
         f"/shipments/{shipment_id}/status",

@@ -1795,6 +1795,12 @@ def seed_dense_business_demo():
             shipment.in_transit_at = utc_now()
         if status == "delivered":
             shipment.delivered_at = utc_now()
+            shipment.delivery_recipient_name = "Anh Tân"
+            shipment.delivery_proof_note = "Khách đã nhận đủ hàng và đối chiếu phiếu giao."
+            shipment.delivery_proof_image_url = "https://example.com/demo/proof-shp-demo-003.jpg"
+            shipment.delivery_latitude = 10.8012
+            shipment.delivery_longitude = 106.6523
+            shipment.delivery_proof_recorded_at = shipment.delivered_at
         db.session.add(shipment)
 
     _create_invoice_for_export(

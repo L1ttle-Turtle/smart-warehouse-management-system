@@ -468,6 +468,29 @@ def serialize_shipment(shipment: Shipment):
         "in_transit_at": shipment.in_transit_at.isoformat() if shipment.in_transit_at else None,
         "delivered_at": shipment.delivered_at.isoformat() if shipment.delivered_at else None,
         "cancelled_at": shipment.cancelled_at.isoformat() if shipment.cancelled_at else None,
+        "has_delivery_proof": bool(shipment.delivery_recipient_name),
+        "delivery_recipient_name": shipment.delivery_recipient_name,
+        "delivery_proof_note": shipment.delivery_proof_note,
+        "delivery_proof_image_url": shipment.delivery_proof_image_url,
+        "delivery_latitude": shipment.delivery_latitude,
+        "delivery_longitude": shipment.delivery_longitude,
+        "delivery_proof_recorded_at": (
+            shipment.delivery_proof_recorded_at.isoformat()
+            if shipment.delivery_proof_recorded_at
+            else None
+        ),
+        "delivery_proof": {
+            "recipient_name": shipment.delivery_recipient_name,
+            "note": shipment.delivery_proof_note,
+            "image_url": shipment.delivery_proof_image_url,
+            "latitude": shipment.delivery_latitude,
+            "longitude": shipment.delivery_longitude,
+            "recorded_at": (
+                shipment.delivery_proof_recorded_at.isoformat()
+                if shipment.delivery_proof_recorded_at
+                else None
+            ),
+        },
         "timeline": build_shipment_timeline(shipment),
         "created_at": shipment.created_at.isoformat() if shipment.created_at else None,
         "updated_at": shipment.updated_at.isoformat() if shipment.updated_at else None,

@@ -457,6 +457,12 @@ class Shipment(db.Model, SerializerMixin, TimestampMixin):
     in_transit_at = db.Column(db.DateTime)
     delivered_at = db.Column(db.DateTime)
     cancelled_at = db.Column(db.DateTime)
+    delivery_recipient_name = db.Column(db.String(120))
+    delivery_proof_note = db.Column(db.String(255))
+    delivery_proof_image_url = db.Column(db.String(500))
+    delivery_latitude = db.Column(db.Float)
+    delivery_longitude = db.Column(db.Float)
+    delivery_proof_recorded_at = db.Column(db.DateTime)
 
     export_receipt = db.relationship("ExportReceipt", back_populates="shipment")
     shipper = db.relationship("User", foreign_keys=[shipper_id])

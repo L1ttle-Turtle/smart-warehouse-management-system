@@ -374,6 +374,11 @@ Luồng dữ liệu chính:
 - Model `shipments`
 - Shipment chỉ được tạo từ phiếu xuất đã xác nhận
 - Mỗi phiếu xuất chỉ có tối đa một shipment
+- Khi chuyển shipment sang `delivered`, backend yêu cầu bằng chứng giao nhận tối thiểu:
+  - người nhận hàng
+  - ghi chú giao nhận
+  - link ảnh/ký nhận nếu có
+  - tọa độ giao hàng nếu có
 - Phân quyền giao hàng theo vai trò:
   - `admin`, `manager`, `staff`: xem, tạo và cập nhật shipment
   - `shipper`: chỉ xem và cập nhật shipment được giao cho chính mình
@@ -392,6 +397,7 @@ Luồng dữ liệu chính:
 - Xem chi tiết sản phẩm và vị trí xuất đi theo shipment
 - Cập nhật trạng thái giao hàng theo đúng quyền của người dùng
 - Xem timeline giao hàng theo các mốc `assigned`, `in_transit`, `delivered`, `cancelled`
+- Khi bấm hoàn tất giao hàng, UI mở form `Bằng chứng giao nhận` để nhập người nhận, ghi chú, link ảnh/ký nhận và tọa độ tùy chọn
 
 ### Module 8 - Hóa đơn tối thiểu
 
@@ -958,7 +964,9 @@ npm run build
 2. Mở `Vận chuyển` để xem shipment demo hoặc tạo shipment mới từ phiếu xuất đã xác nhận
 3. Chọn shipper phụ trách và lưu shipment
 4. Đăng nhập bằng tài khoản `shipper`
-5. Mở lại `Vận chuyển` và cập nhật trạng thái `assigned -> in_transit -> delivered`
+5. Mở lại `Vận chuyển` và cập nhật trạng thái `assigned -> in_transit`
+6. Khi bấm `Đã giao`, nhập người nhận, ghi chú giao nhận, link ảnh/ký nhận hoặc tọa độ nếu có
+7. Mở chi tiết shipment để xem timeline và khu vực `Bằng chứng giao nhận`
 
 ### Kịch bản 6 - Demo hóa đơn tối thiểu
 
@@ -1067,7 +1075,7 @@ Trạng thái các điểm kỹ thuật đã được automation review nhắc t
 - Chưa có rate limit / lockout cho đăng nhập.
 - Phân quyền hiện vẫn là global permission, chưa có warehouse-level scope hay object-level scope.
 - CORS đang để khá rộng cho môi trường dev, chưa siết theo hướng production.
-- Module `Shipment` mới ở mức demo có timeline trạng thái, chưa có bằng chứng giao nhận hoặc ảnh ký nhận.
+- Module `Shipment` đã có timeline trạng thái và bằng chứng giao nhận tối thiểu; phần còn lại chưa làm là ảnh upload thật, chữ ký số, phí vận chuyển, tọa độ tự động và xử lý hoàn hàng nâng cao.
 - Các module `Reports`, `Chat` đã mounted mức demo tối thiểu, nhưng chưa có phân tích nâng cao, presence/typing indicator hoặc object-level scope.
 - Module `Notifications/Tasks` mới ở mức demo tối thiểu, đã có realtime nhẹ nhưng chưa có workflow phê duyệt nhiều bước.
 - Module `Bank stub` mới là mô phỏng nội bộ, chưa kết nối ngân hàng thật hoặc đối soát tự động từ file sao kê.
@@ -1096,7 +1104,7 @@ Thứ tự tiếp theo an toàn nhất cho project:
    - barcode/QR, lô hàng, hạn sử dụng, serial number nếu muốn nâng độ thật nghiệp vụ
    - tối ưu thêm UX cho các phiếu kho nhiều dòng
 2. Hoàn thiện sâu hơn Module 7:
-   - bằng chứng giao nhận
+   - upload ảnh/ký nhận thật thay vì nhập link bằng chứng
    - ghi chú thất bại/hoàn hàng
    - scope shipper theo tuyến hoặc kho nếu cần
 3. Module 9-10 đã mở mức demo:

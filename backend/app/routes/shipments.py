@@ -133,6 +133,19 @@ def audit_shipment_change(action, actor_user_id, shipment):
     )
 
 
+def apply_delivery_proof(shipment, payload):
+    recipient_name = normalize_optional_text(payload.get("delivery_recipient_name"))
+    if not recipient_name:
+        abort(400, description="Cần nhập tên người nhận khi xác nhận đã giao hàng.")
+
+    shipment.delivery_recipient_name = recipient_name
+    shipment.delivery_proof_note = normalize_optional_text(payload.get("delivery_proof_note"))
+    shipment.delivery_proof_image_url = normalize_optional_text(payload.get("delivery_proof_image_url"))
+    shipment.delivery_latitude = payload.get("delivery_latitude")
+    shipment.delivery_longitude = payload.get("delivery_longitude")
+    shipment.delivery_proof_recorded_at = utc_now()
+
+
 @shipments_bp.get("/shipments/meta")
 @jwt_required()
 @permission_required("shipments.manage")
@@ -289,6 +302,7 @@ def update_shipment_status(shipment_id):
     if next_status == "in_transit" and shipment.in_transit_at is None:
         shipment.in_transit_at = utc_now()
     if next_status == "delivered" and shipment.delivered_at is None:
+        apply_delivery_proof(shipment, payload)
         shipment.delivered_at = utc_now()
     if next_status == "cancelled" and shipment.cancelled_at is None:
         shipment.cancelled_at = utc_now()

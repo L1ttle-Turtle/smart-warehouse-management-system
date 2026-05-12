@@ -260,6 +260,31 @@ class ShipmentStatusSchema(Schema):
         validate=validate.OneOf(["assigned", "in_transit", "delivered", "cancelled"]),
     )
     note = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+    delivery_recipient_name = fields.String(
+        load_default=None,
+        allow_none=True,
+        validate=validate.Length(max=120),
+    )
+    delivery_proof_note = fields.String(
+        load_default=None,
+        allow_none=True,
+        validate=validate.Length(max=255),
+    )
+    delivery_proof_image_url = fields.String(
+        load_default=None,
+        allow_none=True,
+        validate=validate.Length(max=500),
+    )
+    delivery_latitude = fields.Float(
+        load_default=None,
+        allow_none=True,
+        validate=validate.Range(min=-90, max=90),
+    )
+    delivery_longitude = fields.Float(
+        load_default=None,
+        allow_none=True,
+        validate=validate.Range(min=-180, max=180),
+    )
 
 
 class InvoicePricingItemSchema(Schema):

@@ -13,6 +13,8 @@ import {
   Empty,
   Form,
   Input,
+  InputNumber,
+  Modal,
   Row,
   Col,
   Select,
@@ -127,10 +129,13 @@ function ShipmentsPage() {
   const canCreate = canManage && roleName !== 'shipper';
 
   const [form] = Form.useForm();
+  const [proofForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [proofModalOpen, setProofModalOpen] = useState(false);
+  const [pendingDeliveryShipment, setPendingDeliveryShipment] = useState(null);
   const [shipments, setShipments] = useState([]);
   const [metaOptions, setMetaOptions] = useState({
     shippers: [],
@@ -312,6 +317,25 @@ function ShipmentsPage() {
     form.resetFields();
   };
 
+  const openDeliveryProofModal = (shipment) => {
+    setPendingDeliveryShipment(shipment);
+    proofForm.resetFields();
+    proofForm.setFieldsValue({
+      delivery_recipient_name: shipment.customer_name || '',
+      delivery_proof_note: '',
+      delivery_proof_image_url: '',
+      delivery_latitude: undefined,
+      delivery_longitude: undefined,
+    });
+    setProofModalOpen(true);
+  };
+
+  const closeDeliveryProofModal = () => {
+    setProofModalOpen(false);
+    setPendingDeliveryShipment(null);
+    proofForm.resetFields();
+  };
+
   const handleCreateShipment = async () => {
     try {
       const values = await form.validateFields();
@@ -333,14 +357,41 @@ function ShipmentsPage() {
     }
   };
 
-  const handleStatusUpdate = async (shipmentId, nextStatus) => {
+  const handleStatusUpdate = async (shipmentId, nextStatus, extraPayload = {}) => {
     try {
       setStatusUpdatingId(shipmentId);
-      await api.post(`/shipments/${shipmentId}/status`, { status: nextStatus });
+      await api.post(`/shipments/${shipmentId}/status`, { status: nextStatus, ...extraPayload });
       message.success('Đã cập nhật trạng thái shipment.');
       await fetchShipments({ page: currentPage, pageSize: currentPageSize });
     } catch (error) {
       message.error(error.response?.data?.message || 'Không cập nhật được trạng thái shipment.');
+    } finally {
+      setStatusUpdatingId(null);
+    }
+  };
+
+  const handleSubmitDeliveryProof = async () => {
+    if (!pendingDeliveryShipment) {
+      return;
+    }
+    try {
+      const values = await proofForm.validateFields();
+      setStatusUpdatingId(pendingDeliveryShipment.id);
+      await api.post(`/shipments/${pendingDeliveryShipment.id}/status`, {
+        status: 'delivered',
+        ...values,
+        delivery_recipient_name: values.delivery_recipient_name?.trim(),
+        delivery_proof_note: values.delivery_proof_note?.trim() || null,
+        delivery_proof_image_url: values.delivery_proof_image_url?.trim() || null,
+      });
+      message.success('Đã ghi nhận bằng chứng giao nhận và hoàn tất shipment.');
+      await fetchShipments({ page: currentPage, pageSize: currentPageSize });
+      closeDeliveryProofModal();
+    } catch (error) {
+      if (error?.errorFields) {
+        return;
+      }
+      message.error(error.response?.data?.message || 'Không lưu được bằng chứng giao nhận.');
     } finally {
       setStatusUpdatingId(null);
     }
@@ -556,6 +607,42 @@ function ShipmentsPage() {
             </Descriptions>
 
             <SectionCard
+              title="Bằng chứng giao nhận"
+              subtitle="Thông tin tối thiểu để chứng minh shipment đã được giao cho người nhận thực tế."
+            >
+              {selectedShipment.has_delivery_proof ? (
+                <Descriptions bordered size="small" column={{ xs: 1, md: 2 }}>
+                  <Descriptions.Item label="Người nhận">
+                    {selectedShipment.delivery_recipient_name || '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Ghi nhận lúc">
+                    {formatDateTime(selectedShipment.delivery_proof_recorded_at)}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Ghi chú">
+                    {selectedShipment.delivery_proof_note || '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Link ảnh/ký nhận">
+                    {selectedShipment.delivery_proof_image_url ? (
+                      <Typography.Link href={selectedShipment.delivery_proof_image_url} target="_blank">
+                        Mở bằng chứng
+                      </Typography.Link>
+                    ) : '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Tọa độ giao hàng">
+                    {selectedShipment.delivery_latitude != null && selectedShipment.delivery_longitude != null
+                      ? `${selectedShipment.delivery_latitude}, ${selectedShipment.delivery_longitude}`
+                      : '-'}
+                  </Descriptions.Item>
+                </Descriptions>
+              ) : (
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description="Shipment chưa có bằng chứng giao nhận. Khi bấm giao xong, hệ thống sẽ yêu cầu nhập người nhận."
+                />
+              )}
+            </SectionCard>
+
+            <SectionCard
               title="Timeline giao hàng"
               subtitle="Theo dõi mốc thời gian từ lúc giao shipper đến khi hoàn tất hoặc hủy."
             >
@@ -578,7 +665,13 @@ function ShipmentsPage() {
                     danger={action.danger}
                     icon={action.icon}
                     loading={statusUpdatingId === selectedShipment.id}
-                    onClick={() => handleStatusUpdate(selectedShipment.id, action.value)}
+                    onClick={() => {
+                      if (action.value === 'delivered') {
+                        openDeliveryProofModal(selectedShipment);
+                        return;
+                      }
+                      handleStatusUpdate(selectedShipment.id, action.value);
+                    }}
                   >
                     {action.label}
                   </Button>
@@ -667,6 +760,52 @@ function ShipmentsPage() {
           </Space>
         </Drawer>
       ) : null}
+
+      <Modal
+        title={`Ghi nhận bằng chứng giao nhận${pendingDeliveryShipment ? ` - ${pendingDeliveryShipment.shipment_code}` : ''}`}
+        open={proofModalOpen}
+        onCancel={closeDeliveryProofModal}
+        onOk={handleSubmitDeliveryProof}
+        confirmLoading={Boolean(pendingDeliveryShipment && statusUpdatingId === pendingDeliveryShipment.id)}
+        okText="Xác nhận đã giao"
+        cancelText="Đóng"
+        destroyOnHidden
+      >
+        <Alert
+          showIcon
+          type="info"
+          title="Cần nhập người nhận trước khi hoàn tất giao hàng"
+          description="Bước này giúp demo có bằng chứng giao nhận tối thiểu. Link ảnh/ký nhận và tọa độ là tùy chọn."
+          style={{ marginBottom: 16 }}
+        />
+        <Form form={proofForm} layout="vertical">
+          <Form.Item
+            name="delivery_recipient_name"
+            label="Người nhận hàng"
+            rules={[{ required: true, message: 'Vui lòng nhập tên người nhận hàng.' }]}
+          >
+            <Input placeholder="Ví dụ: Anh Minh - bộ phận kho khách hàng" />
+          </Form.Item>
+          <Form.Item name="delivery_proof_note" label="Ghi chú giao nhận">
+            <Input.TextArea rows={3} placeholder="Ví dụ: khách đã nhận đủ 2 kiện, không phát sinh thiếu hụt." />
+          </Form.Item>
+          <Form.Item name="delivery_proof_image_url" label="Link ảnh/ký nhận">
+            <Input placeholder="Ví dụ: https://.../proof.jpg" />
+          </Form.Item>
+          <Row gutter={12}>
+            <Col xs={24} md={12}>
+              <Form.Item name="delivery_latitude" label="Vĩ độ">
+                <InputNumber min={-90} max={90} style={{ width: '100%' }} placeholder="10.7769" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="delivery_longitude" label="Kinh độ">
+                <InputNumber min={-180} max={180} style={{ width: '100%' }} placeholder="106.7009" />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
     </Space>
   );
 }
